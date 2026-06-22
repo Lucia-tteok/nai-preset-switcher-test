@@ -1896,9 +1896,9 @@
         }
         var y = null;
         v && v.addEventListener("change", async function() {
-                n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), m()
+                n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), oeSyncEnabled(n.vibeEnabled), n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup), m()
             }), b && b.addEventListener("change", async function() {
-                n.vibeGroup = b.value, n.vibeStrengths = {}, await I.put(n), m()
+                n.vibeGroup = b.value, n.vibeStrengths = {}, await I.put(n), n.vibeEnabled && (oeSyncEnabled(!0), ie(n.vibeGroup)), m()
             }),
             function() {
                 if (b) {
@@ -2207,6 +2207,31 @@
         } catch (e) {}
         return !0
     }
+
+    function oeSyncEnabled(e) {
+        var t = W();
+        if (!t) return;
+        t.enableVibeGroupTransfer = e ? "true" : "false", X();
+        try {
+            var n = window.parent && window.parent.document || s,
+                r = window.parent && (window.parent.jQuery || window.parent.$),
+                a = n.getElementById("enableVibeGroupTransfer");
+            a && (a.checked = !!e, r ? r(a).prop("checked", !!e).trigger("change") : a.dispatchEvent(new Event("change", {
+                bubbles: !0
+            })))
+        } catch (e) {}
+    }
+
+    function oeSyncGroupStrength(e, t, n) {
+        var r = W();
+        if (!r || !r.vibeGroups || !r.vibeGroups[e]) return !1;
+        var a = r.vibeGroups[e];
+        Array.isArray(a.vibes) && a.vibes.forEach(function(e) {
+            e && e.vibeDataId === t && (e.strength = n)
+        }), a.updatedAt = Date.now(), X();
+        r.vibeGroupId === e && ie(e);
+        return !0
+    }
     var oe = null,
         _vlf = !1;
 
@@ -2417,7 +2442,7 @@
                 });
                 var i = e.querySelector("#nl-vibe-groupsel");
                 i && i.addEventListener("change", function() {
-                    oe = i.value, le()
+                    oe = i.value, ie(oe), le()
                 });
                 var o = e.querySelector("#nl-vibe-newgroup");
                 o && o.addEventListener("click", function() {
@@ -2461,8 +2486,12 @@
                 nlVibePending = {}, e.querySelectorAll(".nl-slot-strength").forEach(function(e) {
                         e.addEventListener("input", function() {
                             var t = parseInt(e.getAttribute("data-slot"), 10),
-                                n = parseFloat(e.value);
+                                n = parseFloat(e.value),
+                                r = re(),
+                                a = r && r[oe],
+                                o = a && a.vibes && a.vibes[t];
                             nlVibePending[t] = n;
+                            o && (o.strength = n, a.updatedAt = Date.now(), X(), ie(oe));
                             var i = e.parentNode.querySelector(".nl-slot-strv");
                             i && (i.textContent = n.toFixed(2))
                         })
