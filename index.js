@@ -401,40 +401,87 @@
         } catch (e) {}
     }
 
+    function _getChatu8Settings() {
+        try {
+            var ctx = window.parent && window.parent.SillyTavern && window.parent.SillyTavern.getContext && window.parent.SillyTavern.getContext();
+            var ext = ctx && ctx.extensionSettings || (window.parent && window.parent.extension_settings);
+            return ext && ext["st-chatu8"] || null
+        } catch (e) {
+            return null
+        }
+    }
+
+    function _getChatu8ServerStorage() {
+        var st = _getChatu8Settings();
+        return st ? (st.configImageStorage && "object" == typeof st.configImageStorage || (st.configImageStorage = {}), st.configImageStorage) : null
+    }
+
+    function _shouldUseChatu8ServerStorage() {
+        var st = _getChatu8Settings();
+        return !(!st || st.configImageStorageMode !== "server" && st.configImageStorageMode !== "hybrid" && !st.storeConfigImagesInServer)
+    }
+
     function _mirrorVibeImage(e, t) {
-        var n = _getNaiSettings();
-        if (!n || !e || !t) return;
-        n.vibeImages && "object" == typeof n.vibeImages || (n.vibeImages = {});
-        n.vibeImages[e] = {
-            id: e,
-            data: t,
-            date: Date.now()
-        };
-        _saveNaiSettings()
+        var n = _getChatu8ServerStorage();
+        if (n && e && t) {
+            n[e] = {
+                id: e,
+                data: t,
+                date: Date.now()
+            };
+            _saveNaiSettings()
+        }
     }
 
     async function _restoreVibeImage(e) {
         try {
-            var t = _getNaiSettings(),
-                n = t && t.vibeImages && t.vibeImages[e];
+            var t = _getChatu8ServerStorage(),
+                n = t && t[e];
             return n && n.data ? (await A(e, n.data, !0), n) : null
         } catch (e) {
             return null
         }
     }
 
-    async function _syncVibeImageMirror() {
-        var ns = _getNaiSettings();
-        if (!ns) return;
+    function _collectReferencedVibeImageIds() {
+        var ids = {}, st = _getChatu8Settings();
         try {
-            if (ns.vibeImages && "object" == typeof ns.vibeImages) {
-                var savedIds = Object.keys(ns.vibeImages);
-                for (var i = 0; i < savedIds.length; i++) {
-                    var saved = ns.vibeImages[savedIds[i]];
-                    saved && saved.id && saved.data && await A(saved.id, saved.data, !0)
-                }
+            var presets = st && st.vibePresets || {};
+            Object.keys(presets).forEach(function(k) {
+                var v = presets[k];
+                v && v.vibeDataId && (ids[v.vibeDataId] = !0);
+                v && v.imageId && (ids[v.imageId] = !0)
+            });
+            var groups = st && st.vibeGroups || {};
+            Object.keys(groups).forEach(function(k) {
+                var g = groups[k];
+                g && g.imageId && (ids[g.imageId] = !0);
+                g && Array.isArray(g.vibes) && g.vibes.forEach(function(v) {
+                    v && v.vibeDataId && (ids[v.vibeDataId] = !0)
+                })
+            })
+        } catch (e) {}
+        return ids
+    }
+
+    async function _syncVibeImageMirror() {
+        try {
+            var server = _getChatu8ServerStorage();
+            if (!server) return;
+            Object.keys(server).forEach(function(id) {
+                var saved = server[id];
+                saved && saved.data && A(id, saved.data, !0).catch(function() {})
+            });
+            var ns = _getNaiSettings();
+            if (ns && ns.vibeImages && "object" == typeof ns.vibeImages) {
+                Object.keys(ns.vibeImages).forEach(function(id) {
+                    var saved = ns.vibeImages[id];
+                    saved && saved.data && !server[id] && (server[id] = saved)
+                });
+                delete ns.vibeImages;
             }
-            if (!ns.__vibeImagesMirrored) {
+            if (ns && !ns.__vibeImagesMirrored) {
+                var refs = _collectReferencedVibeImageIds();
                 var oldVibeImages = await new Promise(function(resolve) {
                     var req = indexedDB.open("chatu8_config_images", 2);
                     req.onupgradeneeded = function(ev) {
@@ -452,12 +499,9 @@
                     };
                     req.onerror = function() { resolve([]); };
                 });
-                if (oldVibeImages.length) {
-                    ns.vibeImages && "object" == typeof ns.vibeImages || (ns.vibeImages = {});
-                    oldVibeImages.forEach(function(e) {
-                        e && e.id && e.data && (ns.vibeImages[e.id] = e)
-                    });
-                }
+                oldVibeImages.forEach(function(e) {
+                    e && e.id && e.data && refs[e.id] && !server[e.id] && (server[e.id] = e)
+                });
                 ns.__vibeImagesMirrored = true;
             }
             _saveNaiSettings()
@@ -789,7 +833,7 @@
                 data: t,
                 date: Date.now()
             }), o.oncomplete = () => {
-                n || _mirrorVibeImage(e, t), a()
+                !n && _shouldUseChatu8ServerStorage() && _mirrorVibeImage(e, t), a()
             }, o.onerror = e => i(e.target.error)
         })
     }
