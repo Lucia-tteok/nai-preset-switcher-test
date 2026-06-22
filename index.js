@@ -980,7 +980,7 @@
                 n = s.createElement("style");
             n.id = t, n.textContent = e, s.head.appendChild(n)
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="parse">导入预设</div><div class="nl-tab" data-tab="vibe">Vibe 库</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n), n.querySelector(".nl-close").addEventListener("click", () => {
-            nlConfirmVibePending() && (n.style.display = "none")
+            nlConfirmVibePendingIfVibeTab() && (n.style.display = "none")
         }), (function() {
             try {
                 var _ns = _getNaiSettings();
@@ -1001,7 +1001,7 @@
                 } catch (e) {}
             })
         })(), n.addEventListener("click", e => {
-            e.target === n && nlConfirmVibePending() && (n.style.display = "none")
+            e.target === n && nlConfirmVibePendingIfVibeTab() && (n.style.display = "none")
         }), n.querySelectorAll(".nl-tab").forEach(e => {
             e.addEventListener("click", () => M(e.getAttribute("data-tab")))
         }), n)
@@ -2253,6 +2253,17 @@
         return !(!e || !n[e]) && (oe = e, ie(e), t || oeRefreshDetailVibeViews(e), !0)
     }
 
+
+    function nlIsVibeTabActive() {
+        var e = s.getElementById(r),
+            t = e && e.querySelector(".nl-tab.active");
+        return !!(t && "vibe" === t.getAttribute("data-tab"))
+    }
+
+    function nlConfirmVibePendingIfVibeTab() {
+        return !nlIsVibeTabActive() || nlConfirmVibePending()
+    }
+
     function nlHasVibePending() {
         return !!(nlVibePending && Object.keys(nlVibePending).length)
     }
@@ -2264,7 +2275,7 @@
         return !!(t && t.vibes && n.length) && (n.forEach(function(e) {
             var n = parseInt(e, 10);
             t.vibes[n] && (t.vibes[n].strength = nlVibePending[e])
-        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), oeRefreshDetailVibeViews(oe), nlVibePending = {}, !0)
+        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), nlVibePending = {}, !0)
     }
 
     function nlConfirmVibePending() {
