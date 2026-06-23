@@ -2579,7 +2579,7 @@
                                         presets: 0,
                                         errors: []
                                     };
-                                    if (!e || "object" != typeof e || !e.groups || !e.vibeData) return t.errors.push("文件结构无效（缺少 groups 或 vibeData）"), t;
+                                    if (!e || "object" != typeof e || !e.vibeGroups || !e.vibeData) return t.errors.push("文件结构无效（缺少 vibeGroups 或 vibeData）"), t;
                                     var n = W();
                                     if (!n) return t.errors.push("未检测到智绘姬"), t;
                                     n.vibeGroups || (n.vibeGroups = {}), n.vibePresets && "object" == typeof n.vibePresets || (n.vibePresets = {});
@@ -2588,19 +2588,19 @@
                                             s = a[l];
                                         if (te(s)) try {
                                             var c, d = await ee(s);
-                                            d ? c = d : (c = _(), await A(c, JSON.stringify(s))), r[l] = c
+                                            d ? c = d : (c = _(), await A(c, JSON.stringify(s), !1, "text")), r[l] = c
                                         } catch (e) {
                                             t.errors.push("存储 vibe 失败: " + l)
                                         } else t.errors.push("跳过无效 vibe: " + l)
                                     }
-                                    for (var p = {}, u = e.presetImages || {}, v = Object.keys(u), b = 0; b < v.length; b++) {
+                                    for (var p = {}, u = e.imageData || {}, v = Object.keys(u), b = 0; b < v.length; b++) {
                                         var g = v[b];
                                         try {
                                             var f = _();
-                                            await A(f, u[g]), p[g] = f
+                                            await A(f, u[g], !1, "image"), p[g] = f
                                         } catch (e) {}
                                     }
-                                    var m = e.groups || {};
+                                    var m = e.vibeGroups || {};
                                     Object.keys(m).forEach(function(e) {
                                         var a = m[e];
                                         if (a && Array.isArray(a.vibes)) {
@@ -2609,17 +2609,16 @@
                                             a.vibes.forEach(function(e) {
                                                 if (e && e.vibeDataId) {
                                                     var n = r[e.vibeDataId] || e.vibeDataId,
-                                                        a = e.strength;
-                                                    ("number" != typeof a || isNaN(a) || a < 0 || a > 1) && (a = .6), l.push({
+                                                        a = parseFloat(e.strength);
+                                                    (isNaN(a) || a < 0 || a > 1) && (a = .6), l.push({
                                                         vibeDataId: n,
                                                         strength: a
                                                     }), t.vibes++
                                                 }
                                             }), n.vibeGroups[i] = {
                                                 vibes: l,
-                                                coverImageId: null,
                                                 createdAt: a.createdAt || Date.now(),
-                                                updatedAt: a.updatedAt || Date.now()
+                                                updatedAt: Date.now()
                                             }, t.groups++
                                         }
                                     });
@@ -2633,8 +2632,7 @@
                                                 infoExtract: "number" == typeof a.infoExtract ? a.infoExtract : 1,
                                                 strength: "number" == typeof a.strength ? a.strength : .6,
                                                 imageId: a.imageId ? p[a.imageId] || a.imageId : null,
-                                                vibeDataId: a.vibeDataId ? r[a.vibeDataId] || a.vibeDataId : null,
-                                                thumbnail: a.thumbnail || null
+                                                vibeDataId: a.vibeDataId ? r[a.vibeDataId] || a.vibeDataId : null
                                             }, t.presets++
                                         }
                                     }), X(), t
