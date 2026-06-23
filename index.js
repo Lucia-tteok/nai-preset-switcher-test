@@ -2394,6 +2394,20 @@
         } catch (e) {}
     }
 
+    async function oeRenameVibeGroup(e, t) {
+        var n = W();
+        if (!(n && n.vibeGroups && n.vibeGroups[e]) || "默认组" === e) return !1;
+        if (!(t = (t || "").trim()) || t === e || Object.prototype.hasOwnProperty.call(n.vibeGroups, t)) return !1;
+        n.vibeGroups[t] = n.vibeGroups[e];
+        delete n.vibeGroups[e];
+        n.vibeGroupId === e && (n.vibeGroupId = t);
+        oe === e && (oe = t);
+        X();
+        await ae(e, t);
+        oeSetCurrentGroup(t);
+        return !0
+    }
+
     function ie(e) {
         var t = W();
         if (!t || !t.vibeGroups || !t.vibeGroups[e]) return !1;
@@ -2604,13 +2618,10 @@
                         } else E("组名不能为空", "error")
                 });
                 var l = e.querySelector("#nl-vibe-renamegroup");
-                l && l.addEventListener("click", function() {
+                l && l.addEventListener("click", async function() {
                     if ("默认组" !== oe) {
                         var e = prompt("新的组名：", oe);
-                        null != e && ((e = e.trim()) ? e !== oe && (! function(e, t) {
-                            var n = W();
-                            return !(!(n && n.vibeGroups && n.vibeGroups[e]) || "默认组" === e || !(t = (t || "").trim()) || t === e || Object.prototype.hasOwnProperty.call(n.vibeGroups, t) || (n.vibeGroups[t] = n.vibeGroups[e], delete n.vibeGroups[e], n.vibeGroupId === e && (n.vibeGroupId = t), X(), ae(e, t), 0))
-                        }(oe, e) ? E("重命名失败（可能重名）", "error") : (oeSetCurrentGroup(e, !0), E("已重命名组", "success"), le())) : E("组名不能为空", "error"))
+                        null != e && ((e = e.trim()) ? e !== oe && (await oeRenameVibeGroup(oe, e) ? (E("已重命名组", "success"), le()) : E("重命名失败（可能重名）", "error")) : E("组名不能为空", "error"))
                     } else E("默认组不可重命名", "warning")
                 });
                 var s = e.querySelector("#nl-vibe-delgroup");
