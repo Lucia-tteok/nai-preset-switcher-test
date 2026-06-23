@@ -274,6 +274,7 @@
             });
             status.appendChild(btn);
         } else if (info.remoteVersion || info.isUpToDate === true) {
+            hideUpdateHint();
             status.textContent = "✅ 当前已是最新版本";
             status.style.background = "rgba(80,200,120,.12)";
         } else if (info.isUpToDate === false) {
@@ -297,6 +298,11 @@
 
     /* === 面板标题重命名 + 插入版本标签（点击弹出更新中心） === */
     var _updateHint = null; // 更新提示元素引用
+    function hideUpdateHint() {
+        if (!_updateHint) return;
+        _updateHint.textContent = "";
+        _updateHint.style.display = "none";
+    }
     function ensureBar() {
         var doc = D();
         var panel = doc.getElementById(PANEL_ID);
@@ -367,6 +373,8 @@
             if (mani && isRemoteNewer(mani.version) && _updateHint) {
                 _updateHint.textContent = "（点击版本号进行更新）";
                 _updateHint.style.display = "inline";
+            } else {
+                hideUpdateHint();
             }
         } catch (e) {}
     }
