@@ -2530,7 +2530,7 @@
         return !!(t && t.vibes && n.length) && (n.forEach(function(e) {
             var n = parseInt(e, 10);
             t.vibes[n] && (t.vibes[n].strength = nlVibePending[e])
-        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), nlVibePending = {}, !0)
+        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), oeSyncActivePresetVibeStrengths(oe), nlVibePending = {}, !0)
     }
 
     function nlConfirmVibePending() {
@@ -2713,6 +2713,46 @@
         return !0
     }
 
+    function oeSyncActivePresetVibeStrengths(e) {
+        try {
+            var t = W(),
+                n = (t && t.yusheid_novelai || "").trim(),
+                r = re() || {},
+                a = e || t && t.vibeGroupId,
+                i = r[a],
+                o = {};
+            if (!n || !a || !i || !i.vibes) return;
+            i.vibes.forEach(function(e) {
+                e && e.vibeDataId && "number" == typeof e.strength && (o[e.vibeDataId] = e.strength)
+            }), I.all().then(function(e) {
+                var t = e.filter(function(e) {
+                    return e && (e.name || "").trim() === n
+                })[0];
+                t && t.vibeEnabled && t.vibeGroup === a && (t.vibeStrengths = o, I.put(t))
+            }).catch(function(e) {})
+        } catch (e) {}
+    }
+
+    var oeNativeStrengthGroup = "",
+        oeNativeStrengthSig = "";
+
+    function oeCheckNativeVibeStrengths() {
+        try {
+            var e = oeGetActiveGroup(),
+                t = re() || {},
+                n = t[e],
+                r = [];
+            if (!e || !n || !n.vibes) return;
+            n.vibes.forEach(function(e) {
+                e && r.push(String(e.vibeDataId || "") + ":" + String(e.strength))
+            });
+            r = r.join("|");
+            if (oeNativeStrengthGroup !== e) return oeNativeStrengthGroup = e, void(oeNativeStrengthSig = r);
+            oeNativeStrengthSig && r !== oeNativeStrengthSig && (oeNativeStrengthSig = r, oeSyncActivePresetVibeStrengths(e));
+            oeNativeStrengthSig || (oeNativeStrengthSig = r)
+        } catch (e) {}
+    }
+
     function oeBindNativeVibeGroupSelects() {
         try {
             var e = window.parent && window.parent.document || s;
@@ -2727,6 +2767,7 @@
     function ce() {
         try {
             oeBindNativeVibeGroupSelects();
+            oeCheckNativeVibeStrengths();
             if (s.getElementById(n)) return;
             var t = s.getElementById("extensionsMenu");
             if (!t) return;
