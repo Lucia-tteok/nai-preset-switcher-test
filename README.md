@@ -28,7 +28,7 @@
 填入本仓库地址：
 
 ```text
-https://github.com/Lucia-tteok/nai-preset-switcher-test
+https://github.com/Lucia-tteok/nai-preset-switcher
 ```
 
 安装完成后刷新页面即可。
