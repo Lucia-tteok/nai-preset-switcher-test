@@ -2491,8 +2491,7 @@
 
     function oeRefreshDetailVibeViews(e) {
         try {
-            var t = s.getElementById(r),
-                n = oeGetGroupStrengths(e);
+            var t = s.getElementById(r);
             if (!t) return;
             t.querySelectorAll("#nl-dvibe-group").forEach(function(t) {
                 for (var n = !1, r = 0; r < t.options.length; r++)
@@ -2500,11 +2499,6 @@
                         n = !0;
                         break
                     } n && (t.value = e)
-            }), t.querySelectorAll(".nl-dslot-strength").forEach(function(e) {
-                var t = e.getAttribute("data-vid"),
-                    r = n[t],
-                    a = e.parentNode && e.parentNode.querySelector(".nl-slot-strv");
-                "number" == typeof r && (e.value = r, a && (a.textContent = r.toFixed(2)))
             })
         } catch (e) {}
     }
@@ -2536,7 +2530,7 @@
         return !!(t && t.vibes && n.length) && (n.forEach(function(e) {
             var n = parseInt(e, 10);
             t.vibes[n] && (t.vibes[n].strength = nlVibePending[e])
-        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), oeSyncActivePresetVibeStrengths(oe), nlVibePending = {}, !0)
+        }), t.updatedAt = Date.now(), X(), oe === oeGetActiveGroup() && ie(oe), nlVibePending = {}, !0)
     }
 
     function nlConfirmVibePending() {
@@ -2719,58 +2713,6 @@
         return !0
     }
 
-    function oeGetGroupStrengths(e) {
-        var t = re() || {},
-            n = t[e],
-            r = {};
-        return n && Array.isArray(n.vibes) && n.vibes.forEach(function(e) {
-            e && e.vibeDataId && "number" == typeof e.strength && (r[e.vibeDataId] = e.strength)
-        }), r
-    }
-
-    function oeSameStrengths(e, t) {
-        var n = Object.keys(e || {}),
-            r = Object.keys(t || {});
-        return n.length === r.length && n.every(function(n) {
-            return e[n] === t[n]
-        })
-    }
-
-    async function oeSyncActivePresetVibeStrengths(e) {
-        try {
-            var t = W(),
-                n = (t && t.yusheid_novelai || "").trim(),
-                r = re() || {},
-                a = e || t && t.vibeGroupId;
-            if (!n || !a || !r[a]) return !1;
-            var i = await I.all(),
-                o = i.find(function(e) {
-                    return e && (e.name || "").trim() === n
-                });
-            if (!o || !o.vibeEnabled || o.vibeGroup !== a) return !1;
-            var l = oeGetGroupStrengths(a);
-            if (oeSameStrengths(o.vibeStrengths || {}, l)) return !1;
-            o.vibeStrengths = l, await I.put(o), oeRefreshDetailVibeViews(a);
-            return !0
-        } catch (e) {
-            return !1
-        }
-    }
-
-    var oeNativeStrengthGroup = "",
-        oeNativeStrengthSig = "";
-
-    function oePollNativeVibeStrengths() {
-        try {
-            var e = oeGetActiveGroup();
-            if (!e) return;
-            var t = JSON.stringify(oeGetGroupStrengths(e));
-            if (e !== oeNativeStrengthGroup) return void(oeNativeStrengthGroup = e, oeNativeStrengthSig = t);
-            if (!oeNativeStrengthSig) return void(oeNativeStrengthSig = t);
-            t !== oeNativeStrengthSig && (oeNativeStrengthSig = t, oeSyncActivePresetVibeStrengths(e))
-        } catch (e) {}
-    }
-
     function oeBindNativeVibeGroupSelects() {
         try {
             var e = window.parent && window.parent.document || s;
@@ -2785,7 +2727,6 @@
     function ce() {
         try {
             oeBindNativeVibeGroupSelects();
-            oePollNativeVibeStrengths();
             if (s.getElementById(n)) return;
             var t = s.getElementById("extensionsMenu");
             if (!t) return;
