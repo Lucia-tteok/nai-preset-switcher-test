@@ -2629,7 +2629,7 @@
                 return e && e.vibeGroupId || "默认组"
             }();
         let i;
-        oe && n[oe] || (oe = a), i = t.length ? '<div class="nl-vibe-grid">' + t.map(function(e) {
+        a && n[a] ? oe = a : oe && n[oe] || (oe = a), i = t.length ? '<div class="nl-vibe-grid">' + t.map(function(e) {
             var t = e.thumb ? '<img class="nl-vibe-card-thumb" src="' + e.thumb + '">' : '<div class="nl-vibe-card-thumb empty">&#127912;</div>',
                 n = k(e.presetName),
                 r = k(e.vibeDataId || "");
