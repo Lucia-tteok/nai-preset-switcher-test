@@ -2093,13 +2093,15 @@
                                 I.put(n);
                                 try {
                                     var st = W();
-                                    if (st && (st.yusheid_novelai || "") === (n.name || "").trim() && n.vibeEnabled && n.vibeGroup && st.vibeGroups && st.vibeGroups[n.vibeGroup]) {
+                                    if (st && n.vibeGroup && st.vibeGroups && st.vibeGroups[n.vibeGroup]) {
                                         var grp = st.vibeGroups[n.vibeGroup],
-                                            vs = n.vibeStrengths || {};
+                                            vs = n.vibeStrengths || {},
+                                            changed = !1;
                                         grp.vibes && grp.vibes.forEach(function(it) {
-                                            "number" == typeof vs[it.vibeDataId] && (it.strength = vs[it.vibeDataId])
+                                            "number" == typeof vs[it.vibeDataId] && it.strength !== vs[it.vibeDataId] && (it.strength = vs[it.vibeDataId], changed = !0)
                                         });
-                                        ie(n.vibeGroup)
+                                        changed && X();
+                                        n.vibeEnabled && ie(n.vibeGroup)
                                     }
                                 } catch (e) {}
                             }, 400)
