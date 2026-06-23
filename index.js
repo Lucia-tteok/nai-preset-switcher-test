@@ -713,37 +713,44 @@
             t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
         }()
     }
-
     function autoClassify(pos, neg) {
         var text = ((pos || "") + " " + (neg || "")).toLowerCase();
+
+        function hasKeyword(w) {
+            var escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            if (/^[a-z0-9]+$/.test(w)) {
+                return new RegExp("(^|[^a-z0-9])" + escaped + "($|[^a-z0-9])").test(text)
+            }
+            return text.indexOf(w) !== -1
+        }
+
+        var gufengArtists = [
+            "kang_yiqian", "self_cultivation", "smusmuye", "rafaelaaa", "yao_san_ge_ling", "shang fa", "nixiaozi", "wanke", "nokoya", "colyba",
+            "flamma", "immortalemignis", "sanbonzakura", "richu_de_xiao_taiyang", "gou_haihaihaihai", "zengzhi zhixu", "ibuki satsuki"
+        ];
         var RR = {
-            "古风": ["hanfu", "qipao", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "chinese style", "traditional chinese", "wuxia", "xianxia", "taoist", "jade hairpin", "hairpin", "folding fan", "bamboo forest", "lotus", "ink painting", "oriental"],
+            "古风": ["hanfu", "qipao", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "chinese style", "traditional chinese", "wuxia", "xianxia", "taoist", "jade hairpin", "hairpin", "folding fan", "bamboo forest", "lotus", "ink painting", "oriental"].concat(gufengArtists),
             "西幻": ["fantasy", "elf", "knight", "armor", "medieval", "magic", "dragon", "wizard", "dwarf"],
             "现代": ["modern", "city", "street", "casual", "urban", "jacket", "jeans", "office", "school uniform"],
             "科幻": ["sci-fi", "scifi", "cyberpunk", "mecha", "spaceship", "futuristic", "neon", "android", "robot"],
             "二次元": ["anime", "anime style", "cel shading", "moe", "chibi", "illustration"],
             "写实": ["realistic", "photorealistic", "photo", "dslr", "raw photo", "8k", "realism"]
         };
-        var strongGufeng = ["hanfu", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "traditional chinese", "wuxia", "xianxia"].some(function(w) {
-            return text.indexOf(w) !== -1
-        });
+        var strongGufeng = ["hanfu", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "traditional chinese", "wuxia", "xianxia"].concat(gufengArtists).some(hasKeyword);
         var hits = [];
         for (var k in RR) {
-            if (RR[k].some(function(w) {
-                    return text.indexOf(w) !== -1
-                })) hits.push(k)
+            if (RR[k].some(hasKeyword)) hits.push(k)
         }
         if (strongGufeng && hits.indexOf("古风") >= 0) {
             var westernOnly = ["elf", "knight", "dragon", "wizard", "dwarf", "medieval"];
-            var hasWesternOnly = westernOnly.some(function(w) {
-                return text.indexOf(w) !== -1
-            });
+            var hasWesternOnly = westernOnly.some(hasKeyword);
             if (!hasWesternOnly) hits = hits.filter(function(k) {
                 return k !== "西幻"
             })
         }
         return hits.length ? hits : ["未分类"]
     }
+
 
 
     function f() {
