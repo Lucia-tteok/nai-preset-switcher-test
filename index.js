@@ -2427,10 +2427,10 @@
         return !0
     }
 
-    function ie(e) {
+    function ie(e, skipPanelRefresh) {
         var t = W();
         if (!t || !t.vibeGroups || !t.vibeGroups[e]) return !1;
-        t.vibeGroupId = e, X();
+        t.vibeGroupId = e, oe = e, X();
         try {
             var n = window.parent && window.parent.document || s,
                 r = window.parent && (window.parent.jQuery || window.parent.$),
@@ -2451,6 +2451,12 @@
                 r ? r(last).val(e).trigger("change") : last.dispatchEvent(new Event("change", {
                     bubbles: !0
                 }))
+            }
+        } catch (e) {}
+        try {
+            if (!skipPanelRefresh) {
+                var panel = s.getElementById(r);
+                panel && panel.style.display !== "none" && panel.querySelector('.nl-body[data-view="vibe"]') && le()
             }
         } catch (e) {}
         return !0
@@ -2492,7 +2498,7 @@
 
     function oeSetCurrentGroup(e, t) {
         var n = re() || {};
-        return !(!e || !n[e]) && (oe = e, ie(e), t || oeRefreshDetailVibeViews(e), !0)
+        return !(!e || !n[e]) && (oe = e, ie(e, !0), t || oeRefreshDetailVibeViews(e), !0)
     }
 
 
