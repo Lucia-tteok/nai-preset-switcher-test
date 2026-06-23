@@ -81,7 +81,25 @@
         }
         return null;
     }
-
+    function compareVersion(a, b) {
+        var pa = String(a || "").split(".").map(function(v) {
+                return parseInt(v, 10) || 0
+            }),
+            pb = String(b || "").split(".").map(function(v) {
+                return parseInt(v, 10) || 0
+            }),
+            len = Math.max(pa.length, pb.length);
+        for (var i = 0; i < len; i++) {
+            var da = pa[i] || 0,
+                db = pb[i] || 0;
+            if (da > db) return 1;
+            if (da < db) return -1
+        }
+        return 0
+    }
+    function isRemoteNewer(remoteVersion) {
+        return !!remoteVersion && compareVersion(remoteVersion, LOCAL_VERSION) > 0
+    }
     async function checkUpdate() {
         var result = {
             isUpToDate: null,
@@ -237,10 +255,8 @@
         }
 
         // 显示检查结果
-        if (info.isUpToDate === true) {
-            status.textContent = "✅ 当前已是最新版本";
-            status.style.background = "rgba(80,200,120,.12)";
-        } else if (info.isUpToDate === false) {
+        var hasNewVersion = isRemoteNewer(info.remoteVersion);
+        if (hasNewVersion) {
             status.textContent = "";
             status.style.background = "rgba(255,209,102,.10)";
             var line = el("div", "margin-bottom:10px;color:#ffd166;font-size:14px;", "🔔 发现新版本" + (info.remoteVersion ? " v" + info.remoteVersion : ""));
@@ -257,25 +273,25 @@
                 doUpdate(btn);
             });
             status.appendChild(btn);
+        } else if (info.remoteVersion || info.isUpToDate === true) {
+            status.textContent = "✅ 当前已是最新版本";
+            status.style.background = "rgba(80,200,120,.12)";
+        } else if (info.isUpToDate === false) {
+            status.textContent = "";
+            status.style.background = "rgba(255,209,102,.10)";
+            var line2 = el("div", "margin-bottom:10px;color:#ffd166;font-size:14px;", "🔔 可能有可用更新");
+            status.appendChild(line2);
+            var hint = el("div", "font-size:12px;opacity:.7;margin-bottom:10px;", "未能获取远程版本号，建议在酒馆扩展面板手动检查更新，或点击下方按钮尝试更新。");
+            status.appendChild(hint);
+            var btn2 = el("button", "padding:8px 20px;border:none;border-radius:8px;background:#4a90d9;color:#fff;cursor:pointer;font-size:14px;font-weight:500;");
+            btn2.textContent = "尝试更新";
+            btn2.addEventListener("click", function() {
+                doUpdate(btn2);
+            });
+            status.appendChild(btn2);
         } else {
-            // 接口不可用，降级用版本号比对
-            if (info.remoteVersion && info.remoteVersion !== LOCAL_VERSION) {
-                status.textContent = "";
-                status.style.background = "rgba(255,209,102,.10)";
-                var line2 = el("div", "margin-bottom:10px;color:#ffd166;font-size:14px;", "🔔 远程版本 v" + info.remoteVersion + " 与本地不一致");
-                status.appendChild(line2);
-                var hint = el("div", "font-size:12px;opacity:.7;margin-bottom:10px;", "建议在酒馆扩展面板手动更新，或点击下方按钮尝试更新。");
-                status.appendChild(hint);
-                var btn2 = el("button", "padding:8px 20px;border:none;border-radius:8px;background:#4a90d9;color:#fff;cursor:pointer;font-size:14px;font-weight:500;");
-                btn2.textContent = "尝试更新";
-                btn2.addEventListener("click", function() {
-                    doUpdate(btn2);
-                });
-                status.appendChild(btn2);
-            } else {
-                status.textContent = "无法自动检查更新（可能不是通过 Git URL 安装）。如需更新请用酒馆扩展面板。";
-                status.style.opacity = ".7";
-            }
+            status.textContent = "无法自动检查更新（可能不是通过 Git URL 安装）。如需更新请用酒馆扩展面板。";
+            status.style.opacity = ".7";
         }
     }
 
@@ -348,7 +364,7 @@
         _silentChecked = true;
         try {
             var mani = await fetchRemoteManifest();
-            if (mani && mani.version && mani.version !== LOCAL_VERSION && _updateHint) {
+            if (mani && isRemoteNewer(mani.version) && _updateHint) {
                 _updateHint.textContent = "（点击版本号进行更新）";
                 _updateHint.style.display = "inline";
             }
