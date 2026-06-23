@@ -2118,11 +2118,10 @@
                     var e = re() || {},
                         t = Object.keys(e).sort(function(e, t) {
                             return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
-                        }),
-                        r = oeGetActiveGroup();
-                    t.length ? (r && e[r] && (n.vibeGroup = r), n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), b.innerHTML = t.map(function(e) {
+                        });
+                    t.length ? (n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), b.innerHTML = t.map(function(e) {
                         return '<option value="' + k(e) + '"' + (e === n.vibeGroup ? " selected" : "") + ">" + k(e) + "</option>"
-                    }).join(""), n.vibeGroup || (n.vibeGroup = b.value), I.put(n)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
+                    }).join(""), n.vibeGroup || (n.vibeGroup = b.value)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
                 }
             }(), u && u.addEventListener("click", function() {
                 if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
