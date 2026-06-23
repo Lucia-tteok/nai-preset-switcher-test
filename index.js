@@ -713,6 +713,7 @@
             t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
         }()
     }
+
     function autoClassify(pos, neg) {
         var text = ((pos || "") + " " + (neg || "")).toLowerCase();
 
@@ -750,8 +751,6 @@
         }
         return hits.length ? hits : ["未分类"]
     }
-
-
 
     function f() {
         var ns = _getNaiSettings();
@@ -2118,10 +2117,11 @@
                     var e = re() || {},
                         t = Object.keys(e).sort(function(e, t) {
                             return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
-                        });
-                    t.length ? (n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), b.innerHTML = t.map(function(e) {
+                        }),
+                        r = oeGetActiveGroup();
+                    t.length ? (r && e[r] && (n.vibeGroup = r), n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), b.innerHTML = t.map(function(e) {
                         return '<option value="' + k(e) + '"' + (e === n.vibeGroup ? " selected" : "") + ">" + k(e) + "</option>"
-                    }).join(""), n.vibeGroup || (n.vibeGroup = b.value)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
+                    }).join(""), n.vibeGroup || (n.vibeGroup = b.value), I.put(n)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
                 }
             }(), u && u.addEventListener("click", function() {
                 if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
@@ -2427,10 +2427,10 @@
         return !0
     }
 
-    function ie(e, skipPanelRefresh) {
+    function ie(e) {
         var t = W();
         if (!t || !t.vibeGroups || !t.vibeGroups[e]) return !1;
-        t.vibeGroupId = e, oe = e, X();
+        t.vibeGroupId = e, X();
         try {
             var n = window.parent && window.parent.document || s,
                 r = window.parent && (window.parent.jQuery || window.parent.$),
@@ -2451,12 +2451,6 @@
                 r ? r(last).val(e).trigger("change") : last.dispatchEvent(new Event("change", {
                     bubbles: !0
                 }))
-            }
-        } catch (e) {}
-        try {
-            if (!skipPanelRefresh) {
-                var panel = s.getElementById(r);
-                panel && panel.style.display !== "none" && panel.querySelector('.nl-body[data-view="vibe"]') && le()
             }
         } catch (e) {}
         return !0
@@ -2498,7 +2492,7 @@
 
     function oeSetCurrentGroup(e, t) {
         var n = re() || {};
-        return !(!e || !n[e]) && (oe = e, ie(e, !0), t || oeRefreshDetailVibeViews(e), !0)
+        return !(!e || !n[e]) && (oe = e, ie(e), t || oeRefreshDetailVibeViews(e), !0)
     }
 
 
