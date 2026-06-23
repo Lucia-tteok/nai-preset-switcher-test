@@ -895,7 +895,7 @@
     }
 
     function _() {
-        return "config-img-" + S()
+        return "cfgimg_" + S()
     }
     async function A(e, t, n, r) {
         const a = await q();
@@ -2300,7 +2300,7 @@
     }
 
     function te(e) {
-        return !(!e || "object" != typeof e || "novelai-vibe-transfer" !== e.identifier || !e.encodings || "object" != typeof e.encodings)
+        return !(!e || "object" != typeof e || "novelai-vibe-transfer" !== e.identifier || 1 !== e.version || "string" != typeof e.image || !e.encodings || "object" != typeof e.encodings)
     }
     function _vibeImageSrc(e) {
         return "string" == typeof e && 0 === e.indexOf("data:") ? e : "data:image/png;base64," + e
@@ -2533,7 +2533,7 @@
                 n = k(e.presetName),
                 r = k(e.vibeDataId || "");
             return '<div class="nl-vibe-card" data-preset="' + n + '" data-vid="' + r + '">' + t + '<div class="nl-vibe-card-name">' + k(e.name || "未命名") + '</div><div class="nl-vibe-card-acts"><span class="nl-vibe-add" data-vid="' + r + '" title="加入当前组">＋</span><span class="nl-vibe-del" data-preset="' + n + '" title="删除">✕</span></div></div>'
-        }).join("") + "</div>" : '<div class="nl-empty" style="padding:18px;">还没有 Vibe，可点击上方「导入 Vibe」添加</div>';
+        }).join("") + "</div>" : '<div class="nl-empty" style="padding:18px;">还没有 Vibe，可先在智绘姬中导入后同步显示</div>';
         var o, l = Object.keys(n).sort(function(e, t) {
                 return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
             }).map(function(e) {
