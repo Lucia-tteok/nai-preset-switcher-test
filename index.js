@@ -724,23 +724,26 @@
             return text.indexOf(w) !== -1
         }
 
+        var gufengBase = ["hanfu", "qipao", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "chinese style", "traditional chinese", "wuxia", "xianxia", "taoist", "jade hairpin", "hairpin", "folding fan", "bamboo forest", "lotus", "ink painting", "oriental"];
         var gufengArtists = [
             "kang_yiqian", "self_cultivation", "smusmuye", "rafaelaaa", "yao_san_ge_ling", "shang fa", "nixiaozi", "wanke", "nokoya", "colyba",
             "flamma", "immortalemignis", "sanbonzakura", "richu_de_xiao_taiyang", "gou_haihaihaihai", "zengzhi zhixu", "ibuki satsuki"
         ];
+        var gufengArtistHits = gufengArtists.filter(hasKeyword).length;
         var RR = {
-            "古风": ["hanfu", "qipao", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "chinese style", "traditional chinese", "wuxia", "xianxia", "taoist", "jade hairpin", "hairpin", "folding fan", "bamboo forest", "lotus", "ink painting", "oriental"].concat(gufengArtists),
+            "古风": gufengBase,
             "西幻": ["fantasy", "elf", "knight", "armor", "medieval", "magic", "dragon", "wizard", "dwarf"],
             "现代": ["modern", "city", "street", "casual", "urban", "jacket", "jeans", "office", "school uniform"],
             "科幻": ["sci-fi", "scifi", "cyberpunk", "mecha", "spaceship", "futuristic", "neon", "android", "robot"],
             "二次元": ["anime", "anime style", "cel shading", "moe", "chibi", "illustration"],
             "写实": ["realistic", "photorealistic", "photo", "dslr", "raw photo", "8k", "realism"]
         };
-        var strongGufeng = ["hanfu", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "traditional chinese", "wuxia", "xianxia"].concat(gufengArtists).some(hasKeyword);
+        var strongGufeng = ["hanfu", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "traditional chinese", "wuxia", "xianxia"].some(hasKeyword) || gufengArtistHits >= 2;
         var hits = [];
         for (var k in RR) {
             if (RR[k].some(hasKeyword)) hits.push(k)
         }
+        if (gufengArtistHits >= 2 && hits.indexOf("古风") < 0) hits.push("古风");
         if (strongGufeng && hits.indexOf("古风") >= 0) {
             var westernOnly = ["elf", "knight", "dragon", "wizard", "dwarf", "medieval"];
             var hasWesternOnly = westernOnly.some(hasKeyword);
