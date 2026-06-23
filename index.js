@@ -725,8 +725,8 @@
         }
 
         var gufengArtists = [
-            "kang_yiqian", "self_cultivation", "smusmuye", "rafaelaaa", "yao_san_ge_ling", "shang fa", "nixiaozi", "wanke", "nokoya", "colyba",
-            "flamma", "immortalemignis", "sanbonzakura", "richu_de_xiao_taiyang", "gou_haihaihaihai", "zengzhi zhixu", "ibuki satsuki"
+            "kang_yiqian", "yao_san_ge_ling", "shang fa", "nixiaozi",
+            "richu_de_xiao_taiyang", "gou_haihaihaihai", "zengzhi zhixu", "ibuki satsuki"
         ];
         var RR = {
             "古风": ["hanfu", "qipao", "ancient china", "guzhuang", "tang dynasty", "han dynasty", "song dynasty", "ming dynasty", "chinese clothes", "chinese dress", "chinese robe", "chinese style", "traditional chinese", "wuxia", "xianxia", "taoist", "jade hairpin", "hairpin", "folding fan", "bamboo forest", "lotus", "ink painting", "oriental"].concat(gufengArtists),
