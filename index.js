@@ -2433,7 +2433,7 @@
         t.vibeGroupId = e, oe = e, X();
         try {
             var n = window.parent && window.parent.document || s,
-                jq = window.parent && (window.parent.jQuery || window.parent.$),
+                r = window.parent && (window.parent.jQuery || window.parent.$),
                 as = n.querySelectorAll("#vibe-group-select");
             as.forEach(function(a) {
                 for (var i = !1, o = 0; o < a.options.length; o++)
@@ -2448,16 +2448,9 @@
             });
             if (as.length > 0) {
                 var last = as[as.length - 1];
-                oeNativeSyncing = !0;
-                try {
-                    jq ? jq(last).val(e).trigger("change") : last.dispatchEvent(new Event("change", {
-                        bubbles: !0
-                    }))
-                } finally {
-                    setTimeout(function() {
-                        oeNativeSyncing = !1
-                    }, 0)
-                }
+                r ? r(last).val(e).trigger("change") : last.dispatchEvent(new Event("change", {
+                    bubbles: !0
+                }))
             }
         } catch (e) {}
         try {
@@ -2692,41 +2685,10 @@
             }(e)
     }
     var se = null,
-        nlVibePending = {},
-        oeNativeSyncing = !1;
-
-    function oeRefreshOpenVibePanel() {
-        try {
-            var e = s.getElementById(r);
-            e && e.style.display !== "none" && e.querySelector('.nl-body[data-view="vibe"]') && le()
-        } catch (e) {}
-    }
-
-    function oeSyncCurrentGroupDisplay(e, t) {
-        var n = re() || {},
-            a = W();
-        if (!e || !n[e]) return !1;
-        a && (a.vibeGroupId = e, X());
-        oe = e;
-        t || oeRefreshDetailVibeViews(e);
-        oeRefreshOpenVibePanel();
-        return !0
-    }
-
-    function oeBindNativeVibeGroupSelects() {
-        try {
-            var e = window.parent && window.parent.document || s;
-            e.querySelectorAll("#vibe-group-select").forEach(function(e) {
-                e.__nlVibeGroupBound || (e.__nlVibeGroupBound = !0, e.addEventListener("change", function() {
-                    oeNativeSyncing || nlConfirmVibePending() && oeSyncCurrentGroupDisplay(e.value)
-                }))
-            })
-        } catch (e) {}
-    }
+        nlVibePending = {};
 
     function ce() {
         try {
-            oeBindNativeVibeGroupSelects();
             if (s.getElementById(n)) return;
             var t = s.getElementById("extensionsMenu");
             if (!t) return;
