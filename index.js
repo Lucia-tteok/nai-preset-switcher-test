@@ -2807,10 +2807,10 @@
                             var r = e.parentNode.querySelector(".nl-slot-strv");
                             r && (r.textContent = n.toFixed(2))
                         })
-                    }), e.addEventListener("click", function(t) {
+                    }), e.__naiVibeSaveClickBound || (e.__naiVibeSaveClickBound = !0, e.addEventListener("click", function(t) {
                         var n = t.target && t.target.closest && t.target.closest("#nl-vibe-savegroup");
                         n && (t.preventDefault(), t.stopPropagation(), nlCaptureVibePending(e), nlSaveVibePending() ? E("已保存", "success") : E("没有需要保存的修改", "info"))
-                    }), e.querySelectorAll(".nl-vibe-slot-del").forEach(function(e) {
+                    })), e.querySelectorAll(".nl-vibe-slot-del").forEach(function(e) {
                         e.addEventListener("click", function() {
                             var t = parseInt(e.getAttribute("data-slot"), 10),
                                 n = re(),
@@ -2832,7 +2832,7 @@
             var r = s.createElement("div");
             r.id = n, r.className = "list-group-item flex-container flexGap5 interactable", r.title = e, r.tabIndex = 0, r.innerHTML = '<i class="fa-solid fa-chevron-down fa-fw"></i><span>' + e + "</span>";
             var a = function(e) {
-                e && (e.preventDefault(), e.stopPropagation()); var panel = N(); panel.style.display = "flex"; var active = panel.querySelector(".nl-tab.active"); active && active.getAttribute("data-tab") === "lib" ? R() : M("lib")
+                e && (e.preventDefault(), e.stopPropagation()); var panel = N(); panel.style.display = "flex"; panel.querySelectorAll(".nl-tab").forEach(function(e) { e.classList.toggle("active", "lib" === e.getAttribute("data-tab")) }); panel.querySelectorAll(".nl-body").forEach(function(e) { e.style.display = "lib" === e.getAttribute("data-view") ? "" : "none" }); R()
             };
             r.addEventListener("click", a), r.addEventListener("touchend", a);
             var i = function() {
