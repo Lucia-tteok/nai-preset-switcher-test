@@ -2543,6 +2543,13 @@
             return !1
         }
     }
+
+    function oeSyncActivePresetStrengths(e) {
+        try {
+            var t = oeSyncCurrentPresetBindingFromGroup(e);
+            t && "function" == typeof t.catch && t.catch(function() {})
+        } catch (e) {}
+    }
     function oeRefreshDetailStrengthViews(e) {
         try {
             var t = s;
@@ -2636,10 +2643,13 @@
     }
 
     function nlCaptureVibePending(e) {
-        e && e.querySelectorAll(".nl-slot-strength").forEach(function(e) {
+        var t = re(),
+            n = t && t[oe];
+        e && n && n.vibes && e.querySelectorAll(".nl-slot-strength").forEach(function(e) {
             var t = parseInt(e.getAttribute("data-slot"), 10),
-                n = parseFloat(e.value);
-            isNaN(t) || isNaN(n) || (nlVibePending[t] = n)
+                r = parseFloat(e.value),
+                a = n.vibes[t];
+            if (!isNaN(t) && !isNaN(r) && (!a || "number" != typeof a.strength || Math.abs(a.strength - r) >= .0001)) nlVibePending[t] = r
         })
     }
 
