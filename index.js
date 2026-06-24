@@ -2158,61 +2158,69 @@
                     })) : g.innerHTML = '<div class="nl-empty" style="padding:10px;font-size:12px;">该组为空</div>'
                 } else g.innerHTML = ""
         }
+        function isCurrentAppliedPreset() {
+            try {
+                var e = W();
+                return !!e && (e.yusheid_novelai || "") === (n.name || "").trim()
+            } catch (e) {
+                return !1
+            }
+        }
         var y = null;
         v && v.addEventListener("change", async function() {
-                n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), oeSyncEnabled(n.vibeEnabled), n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup), m()
-            }), b && b.addEventListener("change", async function() {
-                n.vibeGroup = b.value, n.vibeStrengths = {}, await I.put(n), n.vibeEnabled && (oeSyncEnabled(!0), ie(n.vibeGroup)), m()
-            }),
-            function() {
-                if (b) {
-                    var e = re() || {},
-                        t = Object.keys(e).sort(function(e, t) {
-                            return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
-                        });
-                    t.length ? (n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), n.vibeGroup || (n.vibeGroup = e["默认组"] ? "默认组" : t[0]), b.innerHTML = t.map(function(e) {
-                        return '<option value="' + k(e) + '"' + (e === n.vibeGroup ? " selected" : "") + ">" + k(e) + "</option>"
-                    }).join(""), b.value = n.vibeGroup, I.put(n)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
-                }
-            }(), u && u.addEventListener("click", function() {
-                if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
-                const e = (n.name || "").trim();
-                if (!e) return void E("该收藏没有名称", "warning");
-                Y(e, n.positive || "", n.negative || "");
-                const t = function(e) {
-                    var t = W();
-                    if (!t) return !1;
-                    t.yusheid_novelai = e;
-                    var n = t.yushe && t.yushe[e] || {};
-                    X();
-                    try {
-                        var r = window.parent && window.parent.document || s,
-                            a = window.parent && (window.parent.jQuery || window.parent.$),
-                            i = r.getElementById("yusheid_novelai");
-                        return i && (i.value = e, a && a(i).val(e)), [{
-                            id: "fixedPrompt_novelai",
-                            val: n.fixedPrompt || ""
-                        }, {
-                            id: "fixedPrompt_end_novelai",
-                            val: n.fixedPrompt_end || ""
-                        }, {
-                            id: "negativePrompt_novelai",
-                            val: n.negativePrompt || ""
-                        }].forEach(function(e) {
-                            var t = r.getElementById(e.id);
-                            t && (t.value = e.val, a ? a(t).val(e.val).trigger("input").trigger("change") : (t.dispatchEvent(new Event("input", {
-                                bubbles: !0
-                            })), t.dispatchEvent(new Event("change", {
-                                bubbles: !0
-                            }))))
-                        }), !0
-                    } catch (e) {}
-                    return !1
-                }(e);
-                applyPresetVibeBinding(n), async function() {
-                    t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
-                }()
-            });
+            n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), isCurrentAppliedPreset() && (oeSyncEnabled(n.vibeEnabled), n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup)), m()
+        }), b && b.addEventListener("change", async function() {
+            n.vibeGroup = b.value, n.vibeStrengths = {}, await I.put(n), isCurrentAppliedPreset() && (oeSyncEnabled(!0), ie(n.vibeGroup)), m()
+        }),
+        function() {
+            if (b) {
+                var e = re() || {},
+                    t = Object.keys(e).sort(function(e, t) {
+                        return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
+                    });
+                t.length ? (n.vibeGroup && !e[n.vibeGroup] && (n.vibeGroup = ""), n.vibeGroup || (n.vibeGroup = e["默认组"] ? "默认组" : t[0]), b.innerHTML = t.map(function(e) {
+                    return '<option value="' + k(e) + '"' + (e === n.vibeGroup ? " selected" : "") + ">" + k(e) + "</option>"
+                }).join(""), b.value = n.vibeGroup, I.put(n), isCurrentAppliedPreset() && n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup)) : b.innerHTML = '<option value="">（暂无 Vibe 组，去 Vibe 库新建）</option>', m()
+            }
+        }(), u && u.addEventListener("click", function() {
+            if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
+            const e = (n.name || "").trim();
+            if (!e) return void E("该收藏没有名称", "warning");
+            Y(e, n.positive || "", n.negative || "");
+            const t = function(e) {
+                var t = W();
+                if (!t) return !1;
+                t.yusheid_novelai = e;
+                var n = t.yushe && t.yushe[e] || {};
+                X();
+                try {
+                    var r = window.parent && window.parent.document || s,
+                        a = window.parent && (window.parent.jQuery || window.parent.$),
+                        i = r.getElementById("yusheid_novelai");
+                    return i && (i.value = e, a && a(i).val(e)), [{
+                        id: "fixedPrompt_novelai",
+                        val: n.fixedPrompt || ""
+                    }, {
+                        id: "fixedPrompt_end_novelai",
+                        val: n.fixedPrompt_end || ""
+                    }, {
+                        id: "negativePrompt_novelai",
+                        val: n.negativePrompt || ""
+                    }].forEach(function(e) {
+                        var t = r.getElementById(e.id);
+                        t && (t.value = e.val, a ? a(t).val(e.val).trigger("input").trigger("change") : (t.dispatchEvent(new Event("input", {
+                            bubbles: !0
+                        })), t.dispatchEvent(new Event("change", {
+                            bubbles: !0
+                        }))))
+                    }), !0
+                } catch (e) {}
+                return !1
+            }(e);
+            applyPresetVibeBinding(n), async function() {
+                t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
+            }()
+        });
         const $ = i.querySelector("#nl-dthumbimg"),
             S = i.querySelector("#nl-dthumbfile");
         $ && S && ($.addEventListener("click", () => S.click()), S.addEventListener("change", async e => {
