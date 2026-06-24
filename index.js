@@ -2647,8 +2647,7 @@
 
     function nlConfirmVibePending() {
         if (!nlHasVibePending()) return !0;
-        confirm("当前 Vibe 叠加组设置未保存，是否保存？") && nlSaveVibePending();
-        return nlVibePending = {}, !0
+        return confirm("当前 Vibe 叠加组设置未保存，是否保存？") ? nlSaveVibePending() : !1
     }
     var oe = null,
         _vlf = !1;
