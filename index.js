@@ -2521,32 +2521,32 @@
             return (e.vibeDataId || "") + ":" + ("number" == typeof e.strength ? e.strength : "")
         }).join("|") : ""
     }
-
-    async function oeSyncActivePresetStrengths(e) {
+    async function oeSyncCurrentPresetBindingFromGroup(e) {
         try {
             var t = W(),
-                n = t && (t.yusheid_novelai || "").trim(),
-                r = e || oeGetActiveGroup(),
-                a = (re() || {})[r];
-            if (!t || !n || !a || !a.vibes) return !1;
-            var i = (await I.all()).filter(function(e) {
+                n = (t && (t.yusheid_novelai || "").trim()) || "",
+                r = e || oeGetActiveGroup();
+            if (!t || !n || !r) return !1;
+            var a = (await I.all()).filter(function(e) {
                 return (e.name || "").trim() === n
             })[0];
-            if (!i || !i.vibeEnabled || i.vibeGroup !== r) return !1;
-            var o = !1;
-            i.vibeStrengths || (i.vibeStrengths = {}), a.vibes.forEach(function(e) {
-                e && e.vibeDataId && "number" == typeof e.strength && i.vibeStrengths[e.vibeDataId] !== e.strength && (i.vibeStrengths[e.vibeDataId] = e.strength, o = !0)
-            });
-            return o && (await I.put(i), oeRefreshDetailStrengthViews(i)), o
+            if (!a) return !1;
+            a.vibeEnabled = !0, a.vibeGroup = r, a.vibeStrengths = oeCollectGroupStrengths(r);
+            try {
+                await I.put(a)
+            } catch (e) {}
+            try {
+                oeRefreshDetailStrengthViews(a)
+            } catch (e) {}
+            return !0
         } catch (e) {
             return !1
         }
     }
-
     function oeRefreshDetailStrengthViews(e) {
         try {
-            var t = s.getElementById(r);
-            if (!t || !e || !e.vibeStrengths) return;
+            var t = s;
+            if (!e || !e.vibeStrengths) return;
             t.querySelectorAll(".nl-dslot-strength").forEach(function(t) {
                 var n = t.getAttribute("data-vid"),
                     r = e.vibeStrengths[n];
@@ -2559,12 +2559,15 @@
         } catch (e) {}
     }
 
+
     function oeBindNativeVibeGroupSelects() {
         try {
             var e = window.parent && window.parent.document || s;
             e.querySelectorAll("#vibe-group-select").forEach(function(e) {
-                e.__naiVibeGroupBound || (e.__naiVibeGroupBound = !0, e.addEventListener("change", function() {
-                    oeNativeSyncing || nlConfirmVibePending() && (oeSyncCurrentGroupDisplay(e.value), oeLastNativeStrengthSignature = oeGroupStrengthSignature(e.value))
+                e.__naiVibeGroupBound || (e.__naiVibeGroupBound = !0, e.addEventListener("change", async function() {
+                    if (!oeNativeSyncing && nlConfirmVibePending()) {
+                        oeSyncCurrentGroupDisplay(e.value), await oeSyncCurrentPresetBindingFromGroup(e.value), oeLastNativeStrengthSignature = oeGroupStrengthSignature(e.value)
+                    }
                 }))
             })
         } catch (e) {}
@@ -2614,7 +2617,7 @@
 
     function oeSetCurrentGroup(e, t) {
         var n = re() || {};
-        return !(!e || !n[e]) && (oe = e, ie(e), t || oeRefreshDetailVibeViews(e), !0)
+        return !(!e || !n[e]) && (oe = e, ie(e), oeSyncCurrentPresetBindingFromGroup(e), t || oeRefreshDetailVibeViews(e), !0)
     }
 
 
