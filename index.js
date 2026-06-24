@@ -2635,6 +2635,14 @@
         return !!(nlVibePending && Object.keys(nlVibePending).length)
     }
 
+    function nlCaptureVibePending(e) {
+        e && e.querySelectorAll(".nl-slot-strength").forEach(function(e) {
+            var t = parseInt(e.getAttribute("data-slot"), 10),
+                n = parseFloat(e.value);
+            isNaN(t) || isNaN(n) || (nlVibePending[t] = n)
+        })
+    }
+
     function nlSaveVibePending() {
         var e = re(),
             t = e && e[oe],
@@ -2646,8 +2654,11 @@
     }
 
     function nlConfirmVibePending() {
+        var e = s.getElementById(r),
+            t = e && e.querySelector('.nl-body[data-view="vibe"]');
+        nlCaptureVibePending(t);
         if (!nlHasVibePending()) return !0;
-        return confirm("当前 Vibe 叠加组设置未保存，是否保存？") ? nlSaveVibePending() : !1
+        return confirm("当前 Vibe 叠加组设置未保存，是否保存？") && nlSaveVibePending(), nlVibePending = {}, !0
     }
     var oe = null,
         _vlf = !1;
@@ -2786,13 +2797,10 @@
                             var r = e.parentNode.querySelector(".nl-slot-strv");
                             r && (r.textContent = n.toFixed(2))
                         })
-                    }),
-                    function() {
-                        var sg = e.querySelector("#nl-vibe-savegroup");
-                        sg && sg.addEventListener("click", function() {
-                            nlSaveVibePending() ? E("已保存", "success") : E("没有需要保存的修改", "info")
-                        })
-                    }(), e.querySelectorAll(".nl-vibe-slot-del").forEach(function(e) {
+                    }), e.addEventListener("click", function(t) {
+                        var n = t.target && t.target.closest && t.target.closest("#nl-vibe-savegroup");
+                        n && (t.preventDefault(), t.stopPropagation(), nlCaptureVibePending(e), nlSaveVibePending() ? E("已保存", "success") : E("没有需要保存的修改", "info"))
+                    }), e.querySelectorAll(".nl-vibe-slot-del").forEach(function(e) {
                         e.addEventListener("click", function() {
                             var t = parseInt(e.getAttribute("data-slot"), 10),
                                 n = re(),
