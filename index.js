@@ -3,7 +3,7 @@
    弹窗内检查是否最新、显示更新内容、可选更新。不会自动检测。 */
 (function() {
     "use strict";
-    var LOCAL_VERSION = "1.4.1";
+    var LOCAL_VERSION = "1.4.2";
     var EXT_NAME = "/nai-preset-switcher-test"; // 扩展文件夹名，服务端会补全为 third-party/<name>
     var PANEL_ID = "nai-lib-panel-v2";
     var BAR_ID = "nai-update-bar";
@@ -371,7 +371,7 @@
         try {
             var mani = await fetchRemoteManifest();
             if (mani && isRemoteNewer(mani.version) && _updateHint) {
-                _updateHint.textContent = "（点击版本号进行更新）";
+                _updateHint.textContent = "（点击版本号更新）";
                 _updateHint.style.display = "inline";
             } else {
                 hideUpdateHint();
