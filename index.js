@@ -196,14 +196,18 @@
         closeModal();
 
         // 遮罩
-        var mask = el("div", "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.45);");
+        var mask = el("div", "position:absolute;inset:0;z-index:999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;");
         mask.id = MODAL_ID;
         mask.addEventListener("click", function(ev) {
-            if (ev.target === mask) closeModal();
+            if (ev.target === mask) {
+                closeModal();
+                var panel = doc.getElementById(PANEL_ID);
+                if (panel) panel.style.display = "none";
+            }
         });
 
         // 弹窗主体
-        var box = el("div", "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(88vw,420px);max-height:78vh;overflow:auto;background:var(--SmartThemeBlurTintColor,#2b2b2b);color:var(--SmartThemeBodyColor,#eee);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 20px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:14px;line-height:1.6;");
+        var box = el("div", "width:min(88vw,420px);max-height:78vh;overflow:auto;background:var(--SmartThemeBlurTintColor,#2b2b2b);color:var(--SmartThemeBodyColor,#eee);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 20px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:14px;line-height:1.6;");
 
         // 头部：标题 + 关闭
         var head = el("div", "display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;");
@@ -238,7 +242,9 @@
         box.appendChild(logWrap);
 
         mask.appendChild(box);
-        doc.body.appendChild(mask);
+        var panel = doc.getElementById(PANEL_ID);
+        if (panel) panel.appendChild(mask);
+        else doc.body.appendChild(mask);
 
         // 开始检查
         var info = await checkUpdate();
