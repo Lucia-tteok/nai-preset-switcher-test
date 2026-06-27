@@ -238,12 +238,7 @@
         box.appendChild(logWrap);
 
         mask.appendChild(box);
-        var panel = doc.getElementById(PANEL_ID);
-        if (panel) {
-            panel.appendChild(mask);
-        } else {
-            doc.body.appendChild(mask);
-        }
+        doc.body.appendChild(mask);
 
         // 开始检查
         var info = await checkUpdate();
