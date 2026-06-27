@@ -196,14 +196,14 @@
         closeModal();
 
         // 遮罩
-        var mask = el("div", "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;");
+        var mask = el("div", "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.45);");
         mask.id = MODAL_ID;
         mask.addEventListener("click", function(ev) {
             if (ev.target === mask) closeModal();
         });
 
         // 弹窗主体
-        var box = el("div", "width:min(88vw,420px);max-height:78vh;overflow:auto;background:var(--SmartThemeBlurTintColor,#2b2b2b);color:var(--SmartThemeBodyColor,#eee);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 20px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:14px;line-height:1.6;");
+        var box = el("div", "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;width:min(88vw,420px);max-height:78vh;overflow:auto;background:var(--SmartThemeBlurTintColor,#2b2b2b);color:var(--SmartThemeBodyColor,#eee);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 20px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-size:14px;line-height:1.6;");
 
         // 头部：标题 + 关闭
         var head = el("div", "display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;");
@@ -1411,7 +1411,7 @@
                 n = s.createElement("style");
             n.id = t, n.textContent = e, s.head.appendChild(n)
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="vibe">Vibe 库</div><div class="nl-tab" data-tab="parse">设置</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n), n.querySelector(".nl-close").addEventListener("click", () => {
-            nlConfirmVibePendingIfVibeTab() && (n.style.display = "none")
+            nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
         }), (function() {
             try {
                 var _ns = _getNaiSettings();
@@ -1432,7 +1432,7 @@
                 } catch (e) {}
             })
         })(), n.addEventListener("click", e => {
-            e.target === n && nlConfirmVibePendingIfVibeTab() && (n.style.display = "none")
+            e.target === n && nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
         }), n.querySelectorAll(".nl-tab").forEach(e => {
             e.addEventListener("click", () => M(e.getAttribute("data-tab")))
         }), n)
