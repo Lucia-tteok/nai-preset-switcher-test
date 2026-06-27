@@ -473,9 +473,14 @@
         }
     }
 
+    function nlSetFloatingBallPanelOpen(e) {
+        var t = s.getElementById("nl-floating-ball-v2");
+        t && (t.style.display = e ? "none" : "flex")
+    }
+
     function nlOpenPresetSwitcherPanel() {
         var e = N();
-        e && (e.style.display = "flex", M("lib"))
+        e && (e.style.display = "flex", nlSetFloatingBallPanelOpen(!0), M("lib"))
     }
 
     function nlPositionFloatingBall(e, t, n) {
@@ -519,7 +524,7 @@
         var e = s.getElementById("nl-floating-ball-v2");
         if (!nlGetFloatingEnabled()) return void(e && e.remove());
         if (!e) {
-            e = s.createElement("div"), e.id = "nl-floating-ball-v2", e.setAttribute("style", "position:fixed;width:46px;height:46px;border-radius:50%;z-index:100002;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.92);border:1px solid rgba(124,108,255,.55);box-shadow:0 8px 22px rgba(40,55,70,.26);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);"), s.body.appendChild(e);
+            e = s.createElement("div"), e.id = "nl-floating-ball-v2", e.setAttribute("style", "position:fixed;width:46px;height:46px;border-radius:50%;z-index:99999;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.92);border:1px solid rgba(124,108,255,.55);box-shadow:0 8px 22px rgba(40,55,70,.26);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);"), s.body.appendChild(e);
             var t = _getNaiSettings(), n = t && t.floatingBallPos;
             n && "number" == typeof n.left && "number" == typeof n.top ? nlPositionFloatingBall(e, n.left, n.top) : nlPositionFloatingBall(e, (window.innerWidth || 360) - 64, (window.innerHeight || 640) - 138);
             nlBindFloatingDrag(e), e.addEventListener("click", function(t) {
@@ -1418,7 +1423,7 @@
             n.id = t, n.textContent = e, s.head.appendChild(n)
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="vibe">Vibe 库</div><div class="nl-tab" data-tab="parse">设置</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n),
         n._nlClosePresetSwitcherPanel = function() {
-            nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
+            nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none", nlSetFloatingBallPanelOpen(!1))
         }, n.querySelector(".nl-close").addEventListener("click", () => {
             n._nlClosePresetSwitcherPanel()
         }), (function() {
