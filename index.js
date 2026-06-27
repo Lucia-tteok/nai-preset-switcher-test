@@ -1419,11 +1419,9 @@
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="vibe">Vibe 库</div><div class="nl-tab" data-tab="parse">设置</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n),
         n._nlClosePresetSwitcherPanel = function() {
             nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
-        },
-        n._nlHandlePanelCloseTap = function(e) {
-            var t = e.target && e.target.closest ? e.target.closest(".nl-close,.nl-box") : null;
-            (t && t.classList && t.classList.contains("nl-close") || !t) && (e.preventDefault(), e.stopPropagation(), n._nlClosePresetSwitcherPanel())
-        }, n.addEventListener("click", n._nlHandlePanelCloseTap, !0), n.addEventListener("touchend", n._nlHandlePanelCloseTap, !0), (function() {
+        }, n.querySelector(".nl-close").addEventListener("click", () => {
+            n._nlClosePresetSwitcherPanel()
+        }), (function() {
             try {
                 var _ns = _getNaiSettings();
                 var _thm = _ns && _ns.theme || null;
@@ -1442,7 +1440,9 @@
                     localStorage.setItem("nai_lib_theme_v2", dk ? "dark" : "light")
                 } catch (e) {}
             })
-        })(), n.querySelectorAll(".nl-tab").forEach(e => {
+        })(), n.addEventListener("click", e => {
+            e.target === n && n._nlClosePresetSwitcherPanel()
+        }), n.querySelectorAll(".nl-tab").forEach(e => {
             e.addEventListener("click", () => M(e.getAttribute("data-tab")))
         }), n)
     }
