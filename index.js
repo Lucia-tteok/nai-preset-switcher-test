@@ -721,46 +721,14 @@
             e && e.vibeDataId && "number" == typeof e.strength && (n[e.vibeDataId] = e.strength)
         }), n
     }
-
-    function applyPresetEntry(n) {
+function applyPresetEntry(n) {
         if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
         const e = (n.name || "").trim();
         if (!e) return void E("该收藏没有名称", "warning");
-        Y(e, n.positive || "", n.negative || "");
-        const t = function(e) {
-            var t = W();
-            if (!t) return !1;
-            t.yusheid_novelai = e;
-            var n = t.yushe && t.yushe[e] || {};
-            X();
-            try {
-                var r = window.parent && window.parent.document || s,
-                    a = window.parent && (window.parent.jQuery || window.parent.$),
-                    i = r.getElementById("yusheid_novelai");
-                return i && (i.value = e, a && a(i).val(e)), [{
-                    id: "fixedPrompt_novelai",
-                    val: n.fixedPrompt || ""
-                }, {
-                    id: "fixedPrompt_end_novelai",
-                    val: n.fixedPrompt_end || ""
-                }, {
-                    id: "negativePrompt_novelai",
-                    val: n.negativePrompt || ""
-                }].forEach(function(e) {
-                    var t = r.getElementById(e.id);
-                    t && (t.value = e.val, a ? a(t).val(e.val).trigger("input").trigger("change") : (t.dispatchEvent(new Event("input", {
-                        bubbles: !0
-                    })), t.dispatchEvent(new Event("change", {
-                        bubbles: !0
-                    }))))
-                }), !0
-            } catch (e) {}
-            return !1
-        }(e);
-        applyPresetVibeBinding(n), async function() {
-            t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
-        }()
+        const t = nlApplyPresetToChatu(n);
+        t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
     }
+
 
     function autoClassify(pos, neg) {
         var text = ((pos || "") + " " + (neg || "")).toLowerCase();
@@ -1276,8 +1244,9 @@
 
     function B() {
         const e = s.getElementById(r).querySelector('.nl-body[data-view="parse"]'),
-            t = c;
-        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
+            t = c,
+            nai = nlGetNaiParamsFromChatu();
+        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>NovelAI 参数</span></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"><input class="nl-input" id="nl-sampler" placeholder="采样器" value="${k(nai.naiSampler||"")}"><input class="nl-input" id="nl-steps" type="number" step="1" placeholder="步数" value="${k(nai.naiSteps)}"><input class="nl-input" id="nl-guidance" type="number" step="0.1" placeholder="Prompt Guidance" value="${k(nai.naiPromptGuidance)}"><input class="nl-input" id="nl-rescale" type="number" step="0.01" placeholder="Guidance Rescale" value="${k(nai.naiPromptGuidanceRescale)}"></div></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
         const n = e.querySelector("#nl-parse-tags");
 
         function a() {
@@ -1384,13 +1353,14 @@
                     sortOrder: n && typeof n.sortOrder === "number" ? n.sortOrder : (_allrecs.reduce((m, x) => typeof x.sortOrder === "number" && x.sortOrder < m ? x.sortOrder : m, 0) - 1),
                     vibeEnabled: vibeBinding.vibeEnabled,
                     vibeGroup: vibeBinding.vibeGroup,
-                    vibeStrengths: vibeBinding.vibeStrengths
+                    vibeStrengths: vibeBinding.vibeStrengths,
+                    ...nlCollectNaiParamsFrom("", nai)
                 };
             try {
                 await I.put(r);
                 var a = !1;
                 try {
-                    W() && (Y(t, r.positive, r.negative), a = !0)
+                    W() && (nlApplyPresetToChatu(r), a = !0)
                 } catch (e) {}
                 E(a ? n ? "已覆盖并同步智绘姬预设" : "已保存到收藏库并同步为智绘姬预设" : n ? "已覆盖收藏库预设" : "已保存到收藏库", "success"), c = null, d = [], M("lib")
             } catch (e) {
@@ -1457,16 +1427,17 @@
                                 g = b.fixedPrompt || "";
                             b.fixedPrompt_end && (g = g ? g + ", " + b.fixedPrompt_end : b.fixedPrompt_end);
                             var x = b.negativePrompt || "",
-                                h = r[v];
+                                h = r[v],
+                                P = nlGetNaiParamsFromChatu();
                             if (h) {
-                                if (h.positive !== g || h.negative !== x) {
-                                    h.positive = g, h.negative = x;
+                                if (h.positive !== g || h.negative !== x || h.naiSampler !== P.naiSampler || h.naiSteps !== P.naiSteps || h.naiPromptGuidance !== P.naiPromptGuidance || h.naiPromptGuidanceRescale !== P.naiPromptGuidanceRescale) {
+                                    h.positive = g, h.negative = x, Object.assign(h, P);
                                     try {
                                         await I.put(h)
                                     } catch (e) {}
                                 }
                             } else {
-                                var w = {
+                                var w = Object.assign({
                                     id: S(),
                                     name: u,
                                     category: [s],
@@ -1475,7 +1446,7 @@
                                     source: "智绘姬",
                                     thumb: "",
                                     createdAt: Date.now()
-                                };
+                                }, P);
                                 try {
                                     await I.put(w), r[v] = w
                                 } catch (e) {}!d && l.indexOf(s) < 0 && (l.push(s), m(l), d = !0)
@@ -2005,7 +1976,7 @@
         const a = t.querySelector(".nl-detail");
         a && a.remove();
         const i = s.createElement("div");
-        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:pointer;" title="点击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:pointer;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">点击上传预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
+        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:pointer;" title="点击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:pointer;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">点击上传预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>NovelAI 参数</span></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"><input class="nl-input" id="nl-dsampler" placeholder="采样器" value="${k(nlPresetNaiParams(n).naiSampler||"")}"><input class="nl-input" id="nl-dsteps" type="number" step="1" placeholder="步数" value="${k(nlPresetNaiParams(n).naiSteps)}"><input class="nl-input" id="nl-dguidance" type="number" step="0.1" placeholder="Prompt Guidance" value="${k(nlPresetNaiParams(n).naiPromptGuidance)}"><input class="nl-input" id="nl-drescale" type="number" step="0.01" placeholder="Guidance Rescale" value="${k(nlPresetNaiParams(n).naiPromptGuidanceRescale)}"></div></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
             e.target === i && i.remove()
         }), i.querySelector("#nl-dclose").addEventListener("click", () => i.remove()), i.querySelectorAll(".nl-copy").forEach(e => {
             e.addEventListener("click", () => {
@@ -2115,6 +2086,21 @@
             }
         }
         c && c.addEventListener("blur", p), d && d.addEventListener("blur", p);
+        async function saveNaiParams() {
+            var params = nlCollectNaiParamsFrom("d", nlPresetNaiParams(n)), changed = !1;
+            ["naiSampler", "naiSteps", "naiPromptGuidance", "naiPromptGuidanceRescale"].forEach(function(key) {
+                if (n[key] !== params[key]) n[key] = params[key], changed = !0
+            });
+            if (changed) {
+                await I.put(n);
+                isCurrentAppliedPreset() && nlApplyNaiParamsToChatu(n);
+                E("NovelAI 参数已保存", "success")
+            }
+        }
+        ["#nl-dsampler", "#nl-dsteps", "#nl-dguidance", "#nl-drescale"].forEach(function(sel) {
+            var el = i.querySelector(sel);
+            el && (el.addEventListener("change", saveNaiParams), el.addEventListener("blur", saveNaiParams))
+        });
         const u = i.querySelector("#nl-applychatu"),
             v = i.querySelector("#nl-dvibe-enable"),
             b = i.querySelector("#nl-dvibe-group"),
@@ -2186,40 +2172,11 @@
             if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
             const e = (n.name || "").trim();
             if (!e) return void E("该收藏没有名称", "warning");
-            Y(e, n.positive || "", n.negative || "");
-            const t = function(e) {
-                var t = W();
-                if (!t) return !1;
-                t.yusheid_novelai = e;
-                var n = t.yushe && t.yushe[e] || {};
-                X();
-                try {
-                    var r = window.parent && window.parent.document || s,
-                        a = window.parent && (window.parent.jQuery || window.parent.$),
-                        i = r.getElementById("yusheid_novelai");
-                    return i && (i.value = e, a && a(i).val(e)), [{
-                        id: "fixedPrompt_novelai",
-                        val: n.fixedPrompt || ""
-                    }, {
-                        id: "fixedPrompt_end_novelai",
-                        val: n.fixedPrompt_end || ""
-                    }, {
-                        id: "negativePrompt_novelai",
-                        val: n.negativePrompt || ""
-                    }].forEach(function(e) {
-                        var t = r.getElementById(e.id);
-                        t && (t.value = e.val, a ? a(t).val(e.val).trigger("input").trigger("change") : (t.dispatchEvent(new Event("input", {
-                            bubbles: !0
-                        })), t.dispatchEvent(new Event("change", {
-                            bubbles: !0
-                        }))))
-                    }), !0
-                } catch (e) {}
-                return !1
-            }(e);
-            applyPresetVibeBinding(n), async function() {
+            const t = nlApplyPresetToChatu(n);
+            async function done() {
                 t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), R()
-            }()
+            }
+            done()
         });
         const $ = i.querySelector("#nl-dthumbimg"),
             S = i.querySelector("#nl-dthumbfile");
@@ -2272,6 +2229,112 @@
         try {
             e && e.saveSettingsDebounced && e.saveSettingsDebounced()
         } catch (e) {}
+    }
+
+    function nlGetChatuDoc() {
+        return window.parent && window.parent.document || s
+    }
+
+    function nlTriggerChatuInput(e) {
+        if (!e) return;
+        try {
+            var t = window.parent && (window.parent.jQuery || window.parent.$);
+            t ? t(e).val(e.value).trigger("input").trigger("change") : (e.dispatchEvent(new Event("input", {
+                bubbles: !0
+            })), e.dispatchEvent(new Event("change", {
+                bubbles: !0
+            })))
+        } catch (e) {}
+    }
+
+    function nlNormalizeNumber(e) {
+        if (void 0 === e || null === e || "" === e) return "";
+        var t = parseFloat(e);
+        return isNaN(t) ? "" : t
+    }
+
+    function nlGetNaiParamsFromChatu() {
+        var e = W() || {},
+            t = nlGetChatuDoc();
+        function n(n, r) {
+            var a = t && t.getElementById(n);
+            return a && void 0 !== a.value && "" !== a.value ? a.value : void 0 !== e[n] ? e[n] : r
+        }
+        return {
+            naiSampler: n("novelai_sampler", e.novelai_sampler || ""),
+            naiSteps: nlNormalizeNumber(n("novelai_steps", e.novelai_steps || 28)),
+            naiPromptGuidance: nlNormalizeNumber(n("nai3Scale", e.nai3Scale || 5)),
+            naiPromptGuidanceRescale: nlNormalizeNumber(n("cfg_rescale", e.cfg_rescale || 0))
+        }
+    }
+
+    function nlCollectNaiParamsFrom(e, t) {
+        var n = t || nlGetNaiParamsFromChatu(),
+            r = {};
+        return [["naiSampler", "#nl-" + e + "sampler", n.naiSampler], ["naiSteps", "#nl-" + e + "steps", n.naiSteps], ["naiPromptGuidance", "#nl-" + e + "guidance", n.naiPromptGuidance], ["naiPromptGuidanceRescale", "#nl-" + e + "rescale", n.naiPromptGuidanceRescale]].forEach(function(e) {
+            var t = s.querySelector(e[1]),
+        a = t && void 0 !== t.value ? t.value : e[2];
+            r[e[0]] = "naiSampler" === e[0] ? a || "" : nlNormalizeNumber(a)
+        }), r
+    }
+
+    function nlPresetNaiParams(e) {
+        var t = nlGetNaiParamsFromChatu();
+        return {
+            naiSampler: void 0 !== e.naiSampler ? e.naiSampler : t.naiSampler,
+            naiSteps: void 0 !== e.naiSteps ? e.naiSteps : t.naiSteps,
+            naiPromptGuidance: void 0 !== e.naiPromptGuidance ? e.naiPromptGuidance : t.naiPromptGuidance,
+            naiPromptGuidanceRescale: void 0 !== e.naiPromptGuidanceRescale ? e.naiPromptGuidanceRescale : t.naiPromptGuidanceRescale
+        }
+    }
+
+    function nlApplyNaiParamsToChatu(e) {
+        var t = W();
+        if (!t || !e) return !1;
+        var n = nlPresetNaiParams(e),
+            r = nlGetChatuDoc();
+        [["novelai_sampler", n.naiSampler], ["novelai_steps", n.naiSteps], ["nai3Scale", n.naiPromptGuidance], ["cfg_rescale", n.naiPromptGuidanceRescale]].forEach(function(e) {
+            void 0 !== e[1] && null !== e[1] && (t[e[0]] = e[1]);
+            try {
+                var n = r && r.getElementById(e[0]);
+                n && void 0 !== e[1] && null !== e[1] && (n.value = e[1], nlTriggerChatuInput(n))
+            } catch (e) {}
+        }), X();
+        return !0
+    }
+
+    function nlApplyPresetToChatu(n) {
+        if (!W()) return !1;
+        const e = (n.name || "").trim();
+        if (!e) return !1;
+        Y(e, n.positive || "", n.negative || ""), nlApplyNaiParamsToChatu(n);
+        const t = function(e) {
+            var t = W();
+            if (!t) return !1;
+            t.yusheid_novelai = e;
+            var n = t.yushe && t.yushe[e] || {};
+            X();
+            try {
+                var r = window.parent && window.parent.document || s,
+                    a = window.parent && (window.parent.jQuery || window.parent.$),
+                    i = r.getElementById("yusheid_novelai");
+                return i && (i.value = e, a && a(i).val(e)), [{
+                    id: "fixedPrompt_novelai",
+                    val: n.fixedPrompt || ""
+                }, {
+                    id: "fixedPrompt_end_novelai",
+                    val: n.fixedPrompt_end || ""
+                }, {
+                    id: "negativePrompt_novelai",
+                    val: n.negativePrompt || ""
+                }].forEach(function(e) {
+                    var t = r.getElementById(e.id);
+                    t && (t.value = e.val, nlTriggerChatuInput(t))
+                }), !0
+            } catch (e) {}
+            return !1
+        }(e);
+        return applyPresetVibeBinding(n), t
     }
 
     function Y(e, t, n) {
