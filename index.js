@@ -1420,9 +1420,10 @@
         n._nlClosePresetSwitcherPanel = function() {
             nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
         },
-        n.querySelector(".nl-close").addEventListener("click", e => {
-            e.preventDefault(), e.stopPropagation(), n._nlClosePresetSwitcherPanel()
-        }), (function() {
+        n._nlHandlePanelCloseTap = function(e) {
+            var t = e.target && e.target.closest ? e.target.closest(".nl-close,.nl-box") : null;
+            (t && t.classList && t.classList.contains("nl-close") || !t) && (e.preventDefault(), e.stopPropagation(), n._nlClosePresetSwitcherPanel())
+        }, n.addEventListener("click", n._nlHandlePanelCloseTap, !0), n.addEventListener("touchend", n._nlHandlePanelCloseTap, !0), (function() {
             try {
                 var _ns = _getNaiSettings();
                 var _thm = _ns && _ns.theme || null;
@@ -1441,9 +1442,7 @@
                     localStorage.setItem("nai_lib_theme_v2", dk ? "dark" : "light")
                 } catch (e) {}
             })
-        })(), n.addEventListener("click", e => {
-            e.target === n && n._nlClosePresetSwitcherPanel()
-        }), n.querySelectorAll(".nl-tab").forEach(e => {
+        })(), n.querySelectorAll(".nl-tab").forEach(e => {
             e.addEventListener("click", () => M(e.getAttribute("data-tab")))
         }), n)
     }
