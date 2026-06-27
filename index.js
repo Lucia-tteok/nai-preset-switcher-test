@@ -1417,11 +1417,11 @@
                 n = s.createElement("style");
             n.id = t, n.textContent = e, s.head.appendChild(n)
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="vibe">Vibe 库</div><div class="nl-tab" data-tab="parse">设置</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n),
-        nlClosePresetSwitcherPanel = function() {
+        n._nlClosePresetSwitcherPanel = function() {
             nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none")
         },
         n.querySelector(".nl-close").addEventListener("click", e => {
-            e.preventDefault(), e.stopPropagation(), nlClosePresetSwitcherPanel()
+            e.preventDefault(), e.stopPropagation(), n._nlClosePresetSwitcherPanel()
         }), (function() {
             try {
                 var _ns = _getNaiSettings();
@@ -1442,7 +1442,7 @@
                 } catch (e) {}
             })
         })(), n.addEventListener("click", e => {
-            e.target === n && nlClosePresetSwitcherPanel()
+            e.target === n && n._nlClosePresetSwitcherPanel()
         }), n.querySelectorAll(".nl-tab").forEach(e => {
             e.addEventListener("click", () => M(e.getAttribute("data-tab")))
         }), n)
