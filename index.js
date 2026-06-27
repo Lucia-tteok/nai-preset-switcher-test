@@ -714,6 +714,61 @@
         }
     }
 
+    function nlGetChatuNaiParams() {
+        var e = window.parent && window.parent.document || s,
+            t = {};
+        [{
+            id: "novelai_sampler",
+            key: "naiSampler"
+        }, {
+            id: "novelai_steps",
+            key: "naiSteps"
+        }, {
+            id: "nai3Scale",
+            key: "naiPromptGuidance"
+        }, {
+            id: "cfg_rescale",
+            key: "naiPromptGuidanceRescale"
+        }].forEach(function(n) {
+            try {
+                var r = e.getElementById(n.id);
+                r && (t[n.key] = r.value)
+            } catch (e) {}
+        });
+        return t
+    }
+
+    function nlApplyChatuNaiParams(e) {
+        if (!e) return !1;
+        var t = window.parent && window.parent.document || s,
+            n = window.parent && (window.parent.jQuery || window.parent.$),
+            r = !1;
+        [{
+            id: "novelai_sampler",
+            key: "naiSampler"
+        }, {
+            id: "novelai_steps",
+            key: "naiSteps"
+        }, {
+            id: "nai3Scale",
+            key: "naiPromptGuidance"
+        }, {
+            id: "cfg_rescale",
+            key: "naiPromptGuidanceRescale"
+        }].forEach(function(a) {
+            try {
+                if (void 0 === e[a.key] || null === e[a.key]) return;
+                var i = t.getElementById(a.id);
+                i && (i.value = e[a.key], n ? n(i).val(e[a.key]).trigger("input").trigger("change") : (i.dispatchEvent(new Event("input", {
+                    bubbles: !0
+                })), i.dispatchEvent(new Event("change", {
+                    bubbles: !0
+                }))), r = !0)
+            } catch (e) {}
+        });
+        return r
+    }
+
     function oeCollectGroupStrengths(e) {
         var t = (re() || {})[e],
             n = {};
@@ -727,6 +782,7 @@
         const e = (n.name || "").trim();
         if (!e) return void E("该收藏没有名称", "warning");
         Y(e, n.positive || "", n.negative || "");
+        nlApplyChatuNaiParams(n);
         const t = function(e) {
             var t = W();
             if (!t) return !1;
@@ -1372,6 +1428,7 @@
             } catch (e) {}
             if (n && !confirm("已存在名为「" + t + "」的预设，继续保存将覆盖它，是否继续？")) return;
             const vibeBinding = getCurrentVibeBinding(),
+                naiParams = nlGetChatuNaiParams(),
                 r = {
                     id: n ? n.id : S(),
                     name: t,
@@ -1384,13 +1441,17 @@
                     sortOrder: n && typeof n.sortOrder === "number" ? n.sortOrder : (_allrecs.reduce((m, x) => typeof x.sortOrder === "number" && x.sortOrder < m ? x.sortOrder : m, 0) - 1),
                     vibeEnabled: vibeBinding.vibeEnabled,
                     vibeGroup: vibeBinding.vibeGroup,
-                    vibeStrengths: vibeBinding.vibeStrengths
+                    vibeStrengths: vibeBinding.vibeStrengths,
+                    naiSampler: naiParams.naiSampler,
+                    naiSteps: naiParams.naiSteps,
+                    naiPromptGuidance: naiParams.naiPromptGuidance,
+                    naiPromptGuidanceRescale: naiParams.naiPromptGuidanceRescale
                 };
             try {
                 await I.put(r);
                 var a = !1;
                 try {
-                    W() && (Y(t, r.positive, r.negative), a = !0)
+                    W() && (Y(t, r.positive, r.negative), nlApplyChatuNaiParams(r), a = !0)
                 } catch (e) {}
                 E(a ? n ? "已覆盖并同步智绘姬预设" : "已保存到收藏库并同步为智绘姬预设" : n ? "已覆盖收藏库预设" : "已保存到收藏库", "success"), c = null, d = [], M("lib")
             } catch (e) {
@@ -2005,7 +2066,7 @@
         const a = t.querySelector(".nl-detail");
         a && a.remove();
         const i = s.createElement("div");
-        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:pointer;" title="点击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:pointer;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">点击上传预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
+        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:pointer;" title="点击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:pointer;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">点击上传预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><details style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">智绘姬参数同步</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;"><label style="font-size:12px;color:#566472;">采样器<input class="nl-input" id="nl-dnai-sampler" value="${k(n.naiSampler||"")}" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">步数<input class="nl-input" id="nl-dnai-steps" value="${k(n.naiSteps||"")}" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">Prompt Guidance<input class="nl-input" id="nl-dnai-guidance" value="${k(n.naiPromptGuidance||"")}" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">Prompt Guidance Rescale<input class="nl-input" id="nl-dnai-rescale" value="${k(n.naiPromptGuidanceRescale||"")}" style="margin-top:4px;"></label></div><div style="font-size:11px;color:#8a97a4;margin-top:6px;">保存到插件预设；设为当前预设时同步写回智绘姬。</div></details></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
             e.target === i && i.remove()
         }), i.querySelector("#nl-dclose").addEventListener("click", () => i.remove()), i.querySelectorAll(".nl-copy").forEach(e => {
             e.addEventListener("click", () => {
@@ -2077,12 +2138,20 @@
             })
         }(n, i));
         const c = i.querySelector("#nl-dpos"),
-            d = i.querySelector("#nl-dneg");
+            d = i.querySelector("#nl-dneg"),
+            naiSamplerInput = i.querySelector("#nl-dnai-sampler"),
+            naiStepsInput = i.querySelector("#nl-dnai-steps"),
+            naiGuidanceInput = i.querySelector("#nl-dnai-guidance"),
+            naiRescaleInput = i.querySelector("#nl-dnai-rescale");
         async function p() {
             let e = !1;
             const t = c ? c.value : n.positive,
-                r = d ? d.value : n.negative;
-            t !== n.positive && (n.positive = t, e = !0), r !== n.negative && (n.negative = r, e = !0);
+                r = d ? d.value : n.negative,
+                naiSampler = naiSamplerInput ? naiSamplerInput.value : n.naiSampler,
+                naiSteps = naiStepsInput ? naiStepsInput.value : n.naiSteps,
+                naiGuidance = naiGuidanceInput ? naiGuidanceInput.value : n.naiPromptGuidance,
+                naiRescale = naiRescaleInput ? naiRescaleInput.value : n.naiPromptGuidanceRescale;
+            t !== n.positive && (n.positive = t, e = !0), r !== n.negative && (n.negative = r, e = !0), naiSampler !== n.naiSampler && (n.naiSampler = naiSampler, e = !0), naiSteps !== n.naiSteps && (n.naiSteps = naiSteps, e = !0), naiGuidance !== n.naiPromptGuidance && (n.naiPromptGuidance = naiGuidance, e = !0), naiRescale !== n.naiPromptGuidanceRescale && (n.naiPromptGuidanceRescale = naiRescale, e = !0);
             if (e) {
                 await I.put(n);
                 try {
@@ -2092,6 +2161,7 @@
                         st.yushe[nm].fixedPrompt = n.positive || "", st.yushe[nm].negativePrompt = n.negative || "";
                         X();
                         if (st.yusheid_novelai === nm) {
+                            nlApplyChatuNaiParams(n);
                             var pd = window.parent && window.parent.document || document,
                                 jq = window.parent && (window.parent.jQuery || window.parent.$);
                             [{
@@ -2114,7 +2184,7 @@
                 E("提示词已保存", "success")
             }
         }
-        c && c.addEventListener("blur", p), d && d.addEventListener("blur", p);
+        c && c.addEventListener("blur", p), d && d.addEventListener("blur", p), naiSamplerInput && naiSamplerInput.addEventListener("blur", p), naiStepsInput && naiStepsInput.addEventListener("blur", p), naiGuidanceInput && naiGuidanceInput.addEventListener("blur", p), naiRescaleInput && naiRescaleInput.addEventListener("blur", p);
         const u = i.querySelector("#nl-applychatu"),
             v = i.querySelector("#nl-dvibe-enable"),
             b = i.querySelector("#nl-dvibe-group"),
@@ -2179,6 +2249,7 @@
                 const e = (n.name || "").trim();
                 if (!e) return void E("该收藏没有名称", "warning");
                 Y(e, n.positive || "", n.negative || "");
+                nlApplyChatuNaiParams(n);
                 const t = function(e) {
                     var t = W();
                     if (!t) return !1;
