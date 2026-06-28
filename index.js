@@ -522,7 +522,7 @@
         var t = 0, n = 0, r = 0, a = 0, i = !1;
         function o(o) {
             var l = o.touches && o.touches[0] || o;
-            t = l.clientX, n = l.clientY, r = e.offsetLeft || 0, a = e.offsetTop || 0, i = !1, e._nlMoved = !1, o.cancelable && o.preventDefault()
+            t = l.clientX, n = l.clientY, r = e.offsetLeft || 0, a = e.offsetTop || 0, i = !1, e._nlMoved = !1
         }
         function l(o) {
             if (!t && !n) return;
