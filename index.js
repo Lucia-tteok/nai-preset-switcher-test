@@ -522,6 +522,14 @@
         type: "checkbox"
     }];
 
+    var NL_NAI_PARAM_WRITING = !1;
+
+    function nlNormalizeNaiSizeParams(params) {
+        if (!params) return params;
+        var m = String(params.novelai_size || "").match(/^(\d+)x(\d+)$/);
+        return m && (params.novelai_width = m[1], params.novelai_height = m[2]), params
+    }
+
     function nlReadAllNaiParams() {
         var doc = window.parent && window.parent.document || s,
             out = {};
@@ -532,29 +540,35 @@
                 out[f.id] = "checkbox" === f.type ? !!el.checked : el.value;
             } catch (e) {}
         });
-        return out
+        return nlNormalizeNaiSizeParams(out)
     }
 
     function nlWriteAllNaiParams(params) {
         if (!params) return !1;
+        params = nlNormalizeNaiSizeParams(params);
         var doc = window.parent && window.parent.document || s,
             jq = window.parent && (window.parent.jQuery || window.parent.$),
             wrote = !1;
-        NAI_PARAM_FIELDS.forEach(function(f) {
-            try {
-                if (!(f.id in params)) return;
-                var el = doc.getElementById(f.id);
-                if (!el) return;
-                if ("checkbox" === f.type) {
-                    el.checked = !!params[f.id];
-                    jq ? jq(el).prop("checked", !!params[f.id]).trigger("change") : el.dispatchEvent(new Event("change", { bubbles: !0 }))
-                } else {
-                    el.value = params[f.id];
-                    jq ? jq(el).val(params[f.id]).trigger("input").trigger("change") : (el.dispatchEvent(new Event("input", { bubbles: !0 })), el.dispatchEvent(new Event("change", { bubbles: !0 })))
-                }
-                wrote = !0
-            } catch (e) {}
-        });
+        NL_NAI_PARAM_WRITING = !0;
+        try {
+            NAI_PARAM_FIELDS.forEach(function(f) {
+                try {
+                    if (!(f.id in params)) return;
+                    var el = doc.getElementById(f.id);
+                    if (!el) return;
+                    if ("checkbox" === f.type) {
+                        el.checked = !!params[f.id];
+                        jq ? jq(el).prop("checked", !!params[f.id]).trigger("change") : el.dispatchEvent(new Event("change", { bubbles: !0 }))
+                    } else {
+                        el.value = params[f.id];
+                        jq ? jq(el).val(params[f.id]).trigger("input").trigger("change") : (el.dispatchEvent(new Event("input", { bubbles: !0 })), el.dispatchEvent(new Event("change", { bubbles: !0 })))
+                    }
+                    wrote = !0
+                } catch (e) {}
+            })
+        } finally {
+            NL_NAI_PARAM_WRITING = !1
+        }
         return wrote
     }
 
@@ -581,7 +595,7 @@
         var groups = nlGetParamGroups(),
             existing = groups[name];
         return groups[name] = {
-            params: params || existing && existing.params || {},
+            params: nlNormalizeNaiSizeParams(params || existing && existing.params || {}),
             createdAt: existing && existing.createdAt || Date.now(),
             updatedAt: Date.now()
         }, _saveNaiSettings(), !0
@@ -655,7 +669,51 @@
             var el = container.querySelector("#" + idPrefix + f.id);
             el && (out[f.id] = "checkbox" === f.type ? !!el.checked : el.value)
         });
-        return out
+        return nlNormalizeNaiSizeParams(out)
+    }
+
+    function nlSyncParamSizeInputs(container, idPrefix) {
+        if (!container) return;
+        var sizeEl = container.querySelector("#" + idPrefix + "novelai_size"),
+            widthEl = container.querySelector("#" + idPrefix + "novelai_width"),
+            heightEl = container.querySelector("#" + idPrefix + "novelai_height"),
+            m = sizeEl && String(sizeEl.value || "").match(/^(\d+)x(\d+)$/);
+        m && (widthEl && (widthEl.value = m[1]), heightEl && (heightEl.value = m[2]))
+    }
+
+    function nlFillParamFieldInputs(container, idPrefix, params) {
+        params = params || {};
+        NAI_PARAM_FIELDS.forEach(function(f) {
+            var el = container && container.querySelector("#" + idPrefix + f.id);
+            el && f.id in params && ("checkbox" === f.type ? el.checked = !!params[f.id] : el.value = params[f.id])
+        })
+    }
+
+    function nlRefreshVisibleParamInputs(groupName) {
+        var panel = s.getElementById(r);
+        if (!panel) return;
+        var groups = nlGetParamGroups(), params = groupName && groups[groupName] && groups[groupName].params || nlReadAllNaiParams(), setFields = panel.querySelector("#nl-set-param-fields"), setSel = panel.querySelector("#nl-set-param-group"), detailFields = panel.querySelector("#nl-dparam-fields"), detailSel = panel.querySelector("#nl-dparam-group");
+        setFields && setSel && (!groupName || setSel.value === groupName) && nlFillParamFieldInputs(setFields, "nl-set-pf-", params);
+        detailFields && detailSel && (!groupName || detailSel.value === groupName) && nlFillParamFieldInputs(detailFields, "nl-dparam-pf-", params)
+    }
+
+    function nlBindChatuNaiParamReverseSync() {
+        var doc = window.parent && window.parent.document || s;
+        NAI_PARAM_FIELDS.forEach(function(f) {
+            try {
+                var el = doc.getElementById(f.id);
+                if (!el || el._nlNaiParamReverseBound) return;
+                el._nlNaiParamReverseBound = !0;
+                ["input", "change"].forEach(function(ev) {
+                    el.addEventListener(ev, function() {
+                        if (NL_NAI_PARAM_WRITING) return;
+                        var groupName = nlGetActiveParamGroup() || NL_DEFAULT_PARAM_GROUP, params = nlReadAllNaiParams();
+                        nlSaveParamGroup(groupName, params);
+                        nlRefreshVisibleParamInputs(groupName)
+                    })
+                })
+            } catch (e) {}
+        })
     }
 
     function nlGetFloatingEnabled() {
@@ -1680,6 +1738,7 @@
         const e = s.getElementById(r).querySelector('.nl-body[data-view="parse"]'),
             t = c;
         nlEnsureDefaultParamGroup();
+        nlBindChatuNaiParamReverseSync();
         var currentParamGroup = nlGetActiveParamGroup(),
             currentParamGroups = nlGetParamGroups(),
             currentNaiParams = currentParamGroup && currentParamGroups[currentParamGroup] && currentParamGroups[currentParamGroup].params ? currentParamGroups[currentParamGroup].params : nlReadAllNaiParams(),
@@ -1782,9 +1841,10 @@
                 fields.innerHTML = nlRenderParamFieldInputs("nl-set-pf-", gs[cg] && gs[cg].params || nlReadAllNaiParams());
                 bindFields();
             }
-            function saveApply(){
+            function saveApply(ev){
                 var cg = cur();
                 if (!cg) return;
+                ev && ev.target && ev.target.getAttribute("data-pf") === "novelai_size" && nlSyncParamSizeInputs(fields, "nl-set-pf-");
                 var params = nlReadParamFieldInputs(fields, "nl-set-pf-");
                 nlSaveParamGroup(cg, params);
                 nlApplyParamGroup(cg);
@@ -2707,6 +2767,7 @@
             function sortedKeys(groups){ return Object.keys(groups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }); }
             function fillGroupSel(){
                 nlEnsureDefaultParamGroup();
+                nlBindChatuNaiParamReverseSync();
                 var groups = nlGetParamGroups(), keys = sortedKeys(groups), cg = curGroup();
                 if (cg && !groups[cg]) cg = "";
                 if (!cg) cg = groups[NL_DEFAULT_PARAM_GROUP] ? NL_DEFAULT_PARAM_GROUP : keys[0];
@@ -2719,9 +2780,10 @@
                 pf.innerHTML = nlRenderParamFieldInputs("nl-dparam-pf-", params);
                 bindFields();
             }
-            async function saveAndApply(){
+            async function saveAndApply(ev){
                 var sg = curGroup();
                 if (!sg) return;
+                ev && ev.target && ev.target.getAttribute("data-pf") === "novelai_size" && nlSyncParamSizeInputs(pf, "nl-dparam-pf-");
                 var params = nlReadParamFieldInputs(pf, "nl-dparam-pf-");
                 nlSaveParamGroup(sg, params);
                 n.naiParamGroup = sg;
