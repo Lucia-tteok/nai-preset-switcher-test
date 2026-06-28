@@ -1824,9 +1824,6 @@
                 E("图片处理失败", "error")
             }
         }));
-        function settingsParamsFromInputs() {
-            return nlGetSettingsNaiParams(e)
-        }
         (function(){
             var box = e.querySelector("#nl-settings-nai-params"),
                 sel = e.querySelector("#nl-set-param-group"),
@@ -2913,164 +2910,6 @@
         } catch (e) {}
         return e
     }
-    function nlVibeExportFileName(e) {
-        return "NAI-Vibe组-" + String(e || "未命名").replace(/[\/:*?"<>| -]/g, "_").slice(0, 60) + ".json"
-    }
-
-    async function nlBuildVibeGroupExport(e) {
-        var t = re(),
-            n = t && t[e];
-        if (!n) return E("未找到当前 Vibe 组", "error"), null;
-        var r = W(),
-            a = r && r.vibePresets || {},
-            i = {},
-            o = [],
-            l = [],
-            c = Object.assign({}, n, {
-                vibes: Array.isArray(n.vibes) ? n.vibes.map(function(e) {
-                    return Object.assign({}, e)
-                }) : []
-            });
-        c.vibes.forEach(function(e) {
-            e && e.vibeDataId && (i[e.vibeDataId] = !0)
-        });
-        Object.keys(a).forEach(function(e) {
-            var t = a[e];
-            t && t.vibeDataId && i[t.vibeDataId] && o.push(Object.assign({
-                presetName: e
-            }, t))
-        });
-        for (var d = Object.keys(i), p = 0; p < d.length; p++) try {
-            var u = await D(d[p]);
-            u && l.push(u)
-        } catch (e) {}
-        for (var v = 0; v < o.length; v++) try {
-            var b = o[v];
-            if (b && b.imageId) {
-                var g = await D(b.imageId);
-                g && l.push(g)
-            }
-        } catch (e) {}
-        var x = {
-            identifier: "nai-preset-switcher-vibe-group",
-            version: 1,
-            exportedAt: (new Date).toISOString(),
-            groupName: e,
-            group: c,
-            presets: o,
-            storageItems: l
-        };
-        return {
-            fileName: nlVibeExportFileName(e),
-            json: JSON.stringify(x, null, 2)
-        }
-    }
-
-    function nlDownloadVibeGroupExport(e, t) {
-        var n = new Blob([t], {
-                type: "application/json;charset=utf-8"
-            }),
-            r = URL.createObjectURL(n),
-            a = s.createElement("a");
-        a.href = r, a.download = e, a.style.display = "none", s.body.appendChild(a), a.click(), setTimeout(function() {
-            URL.revokeObjectURL(r), a.remove()
-        }, 500)
-    }
-
-    async function nlExportVibeGroup(e) {
-        var t = await nlBuildVibeGroupExport(e);
-        if (!t) return !1;
-        var q = function() {
-                try {
-                    return W().document || s
-                } catch (e) {
-                    return s
-                }
-            }(),
-            n = q.createElement("div"),
-            r = q.createElement("div"),
-            a = q.createElement("div"),
-            i = q.createElement("div"),
-            o = q.createElement("textarea"),
-            l = q.createElement("div"),
-            c = q.createElement("button"),
-            d = q.createElement("button"),
-            p = q.createElement("button"),
-            u = function() {
-                n.remove()
-            };
-        n.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:18px;";
-        r.style.cssText = "position:relative;z-index:2147483647;width:min(620px,96vw);max-height:88vh;overflow:auto;border-radius:18px;background:#fff;color:#263238;box-shadow:0 16px 50px rgba(0,0,0,.28);padding:18px;";
-        a.style.cssText = "font-size:18px;font-weight:700;margin-bottom:8px;";
-        a.textContent = "导出 Vibe 组：「" + e + "」";
-        i.style.cssText = "font-size:13px;opacity:.72;margin-bottom:12px;line-height:1.5;";
-        i.textContent = "点击“下载到本地”保存 JSON 文件，之后可以发给别人用于导入。下面也保留了可复制的导出内容。";
-        o.style.cssText = "width:100%;height:260px;box-sizing:border-box;border:1px solid rgba(0,0,0,.18);border-radius:12px;padding:10px;font-size:12px;line-height:1.45;font-family:monospace;resize:vertical;background:#fafafa;color:#263238;";
-        o.value = t.json;
-        l.style.cssText = "display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;";
-        c.className = d.className = p.className = "nl-btn ghost";
-        c.textContent = "下载到本地";
-        d.textContent = "复制 JSON";
-        p.textContent = "关闭";
-        c.addEventListener("click", function() {
-            nlDownloadVibeGroupExport(t.fileName, o.value), E("已开始下载「" + t.fileName + "」", "success")
-        });
-        d.addEventListener("click", async function() {
-            try {
-                await navigator.clipboard.writeText(o.value), E("已复制导出 JSON", "success")
-            } catch (e) {
-                o.focus(), o.select(), E("请手动复制文本框内容", "warning")
-            }
-        });
-        p.addEventListener("click", u);
-        n.addEventListener("click", function(e) {
-            e.target === n && u()
-        });
-        l.appendChild(c), l.appendChild(d), l.appendChild(p), r.appendChild(a), r.appendChild(i), r.appendChild(o), r.appendChild(l), n.appendChild(r), (q.body || s.body).appendChild(n);
-        return !0
-    }
-
-    function Z(e, t) {
-        if (!e || !t) return !1;
-        if (e.image !== t.image) return !1;
-        if (!e.encodings || !t.encodings) return !1;
-        var n = Object.keys(e.encodings).sort(),
-            r = Object.keys(t.encodings).sort();
-        if (n.length !== r.length) return !1;
-        for (var a = 0; a < n.length; a++) {
-            if (n[a] !== r[a]) return !1;
-            if (JSON.stringify(e.encodings[n[a]]) !== JSON.stringify(t.encodings[r[a]])) return !1
-        }
-        return !0
-    }
-    async function ee(e) {
-        try {
-            var t = W(),
-                n = {},
-                r = t && t.vibePresets || {};
-            Object.keys(r).forEach(function(e) {
-                var t = r[e];
-                t && t.vibeDataId && (n[t.vibeDataId] = !0)
-            });
-            var a = t && t.vibeGroups || {};
-            Object.keys(a).forEach(function(e) {
-                var t = a[e];
-                t && Array.isArray(t.vibes) && t.vibes.forEach(function(e) {
-                    e.vibeDataId && (n[e.vibeDataId] = !0)
-                })
-            });
-            for (var i = Object.keys(n), o = 0; o < i.length; o++) try {
-                var l = await D(i[o]);
-                if (l && l.data)
-                    if (Z(e, JSON.parse(l.data))) return i[o]
-            } catch (e) {}
-        } catch (e) {}
-        return null
-    }
-
-    function te(e) {
-        return !(!e || "object" != typeof e || "novelai-vibe-transfer" !== e.identifier || 1 !== e.version || "string" != typeof e.image || !e.encodings || "object" != typeof e.encodings)
-    }
     function _vibeImageSrc(e) {
         return "string" == typeof e && 0 === e.indexOf("data:") ? e : "data:image/png;base64," + e
     }
@@ -3113,38 +2952,6 @@
             n && X()
         } catch (e) {}
     }
-    async function ne(e) {
-        var t = W();
-        if (!t) return null;
-        t.vibePresets && "object" == typeof t.vibePresets || (t.vibePresets = {});
-        var n, r = e.thumbnail || "";
-        if (!r && e.image) try {
-            r = await _makeVibeThumbnail(e.image)
-        } catch (e) {}
-        var a = e.name || "Vibe " + (new Date).toLocaleDateString(),
-            i = await ee(e);
-        i || (i = _(), await A(i, JSON.stringify(e), !1, "text"));
-        var o = null;
-        try {
-            if (e.image) {
-                var l = _vibeImageSrc(e.image);
-                o = _(), await A(o, l, !1, "image")
-            }
-        } catch (e) {
-            o = null
-        }
-        for (var c = a, d = c, p = 2; Object.prototype.hasOwnProperty.call(t.vibePresets, d);) d = c + " (" + p + ")", p++;
-        var u = e.importInfo && "object" == typeof e.importInfo ? e.importInfo : {};
-        return t.vibePresets[d] = {
-            model: u.model || "nai-diffusion-4-5-full",
-            infoExtract: 1,
-            strength: "number" == typeof u.strength ? u.strength : .6,
-            imageId: o,
-            vibeDataId: i,
-            thumbnail: r || null
-        }, X(), d
-    }
-
     function re() {
         var e = W();
         return e ? (e.vibeGroups || (e.vibeGroups = {}), e.vibeGroups) : null
@@ -3414,7 +3221,7 @@
                     i = r && r.thumb ? '<img class="nl-vibe-slot-thumb" draggable="false" oncontextmenu="return false" src="' + r.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
                     o = "number" == typeof e.strength ? e.strength : .6;
                 return '<div class="nl-vibe-slot" data-slot="' + n + '">' + i + '<div class="nl-vibe-slot-body"><div class="nl-vibe-slot-name">' + k(a) + '</div><label class="nl-vibe-row"><span>强度 <b class="nl-slot-strv">' + o.toFixed(2) + '</b></span><input type="range" class="nl-slot-strength" data-slot="' + n + '" min="0" max="1" step="0.01" value="' + o + '"></label></div><span class="nl-vibe-slot-del" data-slot="' + n + '" title="移出组">✕</span></div>'
-            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-exportgroup">导出组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
+            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
             function(e) {
                 e.querySelectorAll(".nl-vibe-add").forEach(function(e) {
                     e.addEventListener("click", function() {
@@ -3483,11 +3290,6 @@
                         var e = prompt("新的组名：", oe);
                         null != e && ((e = e.trim()) ? e !== oe && (await oeRenameVibeGroup(oe, e) ? (E("已重命名组", "success"), le()) : E("重命名失败（可能重名）", "error")) : E("组名不能为空", "error"))
                     } else E("默认组不可重命名", "warning")
-                });
-                var c = e.querySelector("#nl-vibe-exportgroup");
-                c && c.addEventListener("click", async function() {
-                    nlCaptureVibePending(e), nlSaveVibePending();
-                    await nlExportVibeGroup(oe)
                 });
                 var s = e.querySelector("#nl-vibe-delgroup");
                 s && s.addEventListener("click", function() {
