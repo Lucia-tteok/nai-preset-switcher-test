@@ -1677,9 +1677,14 @@
 
     function B() {
         const e = s.getElementById(r).querySelector('.nl-body[data-view="parse"]'),
-            t = c,
-            currentNaiParams = nlReadAllNaiParams();
-        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">圆形显示当前预设预览图</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
+            t = c;
+        nlEnsureDefaultParamGroup();
+        var currentParamGroup = nlGetActiveParamGroup(),
+            currentParamGroups = nlGetParamGroups(),
+            currentNaiParams = currentParamGroup && currentParamGroups[currentParamGroup] && currentParamGroups[currentParamGroup].params ? currentParamGroups[currentParamGroup].params : nlReadAllNaiParams(),
+            currentParamKeys = Object.keys(currentParamGroups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }),
+            currentParamOptions = currentParamKeys.map(function(g){ return '<option value="'+k(g)+'"'+(g===currentParamGroup?' selected':'')+'>'+k(g)+'</option>'; }).join("");
+        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">圆形显示当前预设预览图</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><select class="nl-input" id="nl-set-param-group" style="flex:1 1 auto;min-width:0;margin:0;">${currentParamOptions || '<option value="">（暂无参数组）</option>'}</select><button class="nl-btn ghost nl-set-param-btn" data-pa="new" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-set-param-btn" data-pa="rename" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-set-param-btn" data-pa="del" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">删组</button></div><div id="nl-set-param-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
         const n = e.querySelector("#nl-parse-tags");
 
         function a() {
@@ -1760,14 +1765,66 @@
         function settingsParamsFromInputs() {
             return nlGetSettingsNaiParams(e)
         }
-        var _setParamsContainer = e.querySelector("#nl-settings-nai-params");
-        _setParamsContainer && _setParamsContainer.querySelectorAll("[data-pf]").forEach(function(el) {
-            ["input", "change"].forEach(function(ev) {
-                el.addEventListener(ev, function() {
-                    nlWriteAllNaiParams(nlReadParamFieldInputs(_setParamsContainer, "nl-set-pf-"))
+        (function(){
+            var box = e.querySelector("#nl-settings-nai-params"),
+                sel = e.querySelector("#nl-set-param-group"),
+                fields = e.querySelector("#nl-set-param-fields");
+            if (!box || !sel || !fields) return;
+            function cur(){ return sel.value || nlGetActiveParamGroup() || NL_DEFAULT_PARAM_GROUP; }
+            function keys(){ var gs = nlGetParamGroups(); return Object.keys(gs).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }); }
+            function refresh(group){
+                var gs = nlGetParamGroups(), ks = keys(), cg = group || cur();
+                if (!ks.length){ nlEnsureDefaultParamGroup(); gs = nlGetParamGroups(); ks = keys(); }
+                if (!gs[cg]) cg = gs[NL_DEFAULT_PARAM_GROUP] ? NL_DEFAULT_PARAM_GROUP : ks[0];
+                sel.innerHTML = ks.map(function(g){ return '<option value="'+k(g)+'"'+(g===cg?' selected':'')+'>'+k(g)+'</option>'; }).join("");
+                sel.value = cg || "";
+                fields.innerHTML = nlRenderParamFieldInputs("nl-set-pf-", gs[cg] && gs[cg].params || nlReadAllNaiParams());
+                bindFields();
+            }
+            function saveApply(){
+                var cg = cur();
+                if (!cg) return;
+                var params = nlReadParamFieldInputs(fields, "nl-set-pf-");
+                nlSaveParamGroup(cg, params);
+                nlApplyParamGroup(cg);
+            }
+            function bindFields(){
+                fields.querySelectorAll("[data-pf]").forEach(function(el) {
+                    ["input", "change"].forEach(function(ev) {
+                        el.addEventListener(ev, saveApply)
+                    })
+                });
+            }
+            sel.addEventListener("change", function(){
+                refresh(sel.value);
+                nlApplyParamGroup(sel.value);
+            });
+            box.querySelectorAll(".nl-set-param-btn").forEach(function(btn){
+                btn.addEventListener("click", function(){
+                    var act = btn.getAttribute("data-pa"), cg = cur();
+                    if (act === "new") {
+                        var nm = prompt("输入新参数组名称：");
+                        if (!nm || !(nm = nm.trim())) return;
+                        if (nlGetParamGroups()[nm]) return void E("已存在同名参数组", "error");
+                        nlCreateParamGroup(nm, nlReadParamFieldInputs(fields, "nl-set-pf-"));
+                        refresh(nm); nlApplyParamGroup(nm); E("已创建并启用参数组「"+nm+"」", "success");
+                    } else if (act === "rename") {
+                        if (!cg) return void E("暂无参数组", "warning");
+                        if (cg === NL_DEFAULT_PARAM_GROUP) return void E("默认组不可重命名", "warning");
+                        var nn = prompt("重命名参数组「"+cg+"」为：", cg);
+                        if (!nn || !(nn = nn.trim()) || nn === cg) return;
+                        if (nlGetParamGroups()[nn]) return void E("已存在同名参数组", "error");
+                        nlRenameParamGroup(cg, nn) ? (refresh(nn), nlApplyParamGroup(nn), E("已重命名为「"+nn+"」", "success")) : E("重命名失败", "error");
+                    } else if (act === "del") {
+                        if (!cg) return void E("暂无参数组", "warning");
+                        if (cg === NL_DEFAULT_PARAM_GROUP) return void E("默认组不可删除", "warning");
+                        if (!confirm("删除参数组「"+cg+"」？")) return;
+                        nlDeleteParamGroup(cg) ? (refresh(""), nlApplyParamGroup(cur()), E("已删除参数组「"+cg+"」", "success")) : E("删除失败", "error");
+                    }
                 })
-            })
-        });
+            });
+            bindFields();
+        })();
         var ft = e.querySelector("#nl-floating-toggle");
         ft && ft.addEventListener("change", function() {
             nlSetFloatingEnabled(ft.checked)
@@ -2431,7 +2488,7 @@
         const a = t.querySelector(".nl-detail");
         a && a.remove();
         const i = s.createElement("div");
-        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:zoom-in;" title="单击查看大图，双击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:zoom-in;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">单击查看大图，双击更换预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-field"><details class="nl-dparam-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">智绘姬参数</summary><div style="display:flex;align-items:center;gap:8px;margin:8px 0;"><select class="nl-input" id="nl-dparam-group" style="flex:1;margin:0;"></select><button class="nl-btn ghost nl-dparam-btn" data-pa="new" style="font-size:11px!important;padding:5px 6px!important;min-height:28px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-dparam-btn" data-pa="rename" style="font-size:11px!important;padding:5px 6px!important;min-height:28px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-dparam-btn" data-pa="del" style="font-size:11px!important;padding:5px 6px!important;min-height:28px!important;line-height:1.1!important;">删除</button></div><div class="nl-dparam-fields" id="nl-dparam-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div><div class="nl-btnrow" style="margin-top:8px;"><button class="nl-btn nl-dparam-btn" data-pa="save" style="font-size:11px!important;padding:5px 6px!important;min-height:28px!important;line-height:1.1!important;">保存参数组</button><button class="nl-btn ghost nl-dparam-btn" data-pa="apply" style="font-size:11px!important;padding:5px 6px!important;min-height:28px!important;line-height:1.1!important;">应用到智绘姬</button></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
+        i.className = "nl-detail", i.innerHTML = `\n<div class="nl-dbox">${n.thumb?`<img class="nl-dimg" id="nl-dthumbimg" src="${n.thumb}" style="cursor:zoom-in;" title="单击查看大图，双击更换预览图">`:'<div class="nl-thumb empty" id="nl-dthumbimg" style="cursor:zoom-in;height:120px;display:flex;align-items:center;justify-content:center;pointer-events:auto;">单击查看大图，双击更换预览图</div>'}<input type="file" id="nl-dthumbfile" accept="image/*" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;"><div class="nl-field"><div class="nl-label"><span>名称</span></div><input class="nl-input" id="nl-dname" value="${k(n.name||"未命名")}" style="font-size:15px;font-weight:600;"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tagdropdown" id="nl-detail-tags">${h(n).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")||'<span class="nl-placeholder">点击选择标签</span>'}</div></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dpos">${k(n.positive||"")}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-dneg">${k(n.negative||"")}</textarea></div><div class="nl-field"><details class="nl-dvibe-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">Vibe 叠加组</summary><div style="display:flex;align-items:center;gap:10px;margin:8px 0;"><select class="nl-input" id="nl-dvibe-group"${n.vibeEnabled?"":" disabled"} style="flex:1;margin:0;"></select><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;"><input type="checkbox" id="nl-dvibe-enable"${n.vibeEnabled?" checked":""}> 启用</label></div><div class="nl-dvibe-slots" id="nl-dvibe-slots"></div></details></div><div class="nl-field"><details class="nl-dparam-details" style="border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.5);"><summary style="cursor:pointer;font-size:13px;color:#566472;font-weight:600;outline:none;">智绘姬参数</summary><div style="display:flex;align-items:center;gap:8px;margin:8px 0;"><select class="nl-input" id="nl-dparam-group" style="flex:1;margin:0;"></select></div><div class="nl-dparam-fields" id="nl-dparam-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div></details></div><div class="nl-btnrow"><button class="nl-btn danger" id="nl-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button><button class="nl-btn" id="nl-applychatu" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">设为当前预设</button></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-dclose" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button></div>\n</div>`, t.querySelector(".nl-box").appendChild(i), i.addEventListener("click", e => {
             e.target === i && i.remove()
         }), i.querySelector("#nl-dclose").addEventListener("click", () => i.remove()), i.querySelectorAll(".nl-copy").forEach(e => {
             e.addEventListener("click", () => {
@@ -2646,75 +2703,45 @@
                 pf = i.querySelector("#nl-dparam-fields");
             if (!pg || !pf) return;
             function curGroup(){ return n.naiParamGroup || nlGetActiveParamGroup() || ""; }
+            function sortedKeys(groups){ return Object.keys(groups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }); }
             function fillGroupSel(){
-                var groups = nlGetParamGroups(),
-                    keys = Object.keys(groups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }),
-                    cg = curGroup();
-                if (!keys.length){ pg.innerHTML='<option value="">（暂无参数组，点击新建）</option>'; return; }
+                nlEnsureDefaultParamGroup();
+                var groups = nlGetParamGroups(), keys = sortedKeys(groups), cg = curGroup();
                 if (cg && !groups[cg]) cg = "";
                 if (!cg) cg = groups[NL_DEFAULT_PARAM_GROUP] ? NL_DEFAULT_PARAM_GROUP : keys[0];
-                n.naiParamGroup = cg;
-                pg.innerHTML = keys.map(function(e){ return '<option value="'+k(e)+'"'+(e===cg?" selected":"")+">"+k(e)+"</option>"; }).join("");
-                pg.value = cg;
+                n.naiParamGroup = cg || "";
+                pg.innerHTML = keys.length ? keys.map(function(e){ return '<option value="'+k(e)+'"'+(e===cg?' selected':'')+'>'+k(e)+'</option>'; }).join("") : '<option value="">（暂无参数组）</option>';
+                pg.value = cg || "";
             }
             function fillFields(){
-                var groups = nlGetParamGroups(),
-                    cg = curGroup(),
-                    g = groups[cg],
-                    params = g && g.params || {};
+                var groups = nlGetParamGroups(), cg = curGroup(), g = groups[cg], params = g && g.params || {};
                 pf.innerHTML = nlRenderParamFieldInputs("nl-dparam-pf-", params);
+                bindFields();
+            }
+            async function saveAndApply(){
+                var sg = curGroup();
+                if (!sg) return;
+                var params = nlReadParamFieldInputs(pf, "nl-dparam-pf-");
+                nlSaveParamGroup(sg, params);
+                n.naiParamGroup = sg;
+                n.naiParams = params;
+                await I.put(n);
+                nlApplyParamGroup(sg);
+            }
+            function bindFields(){
+                pf.querySelectorAll("[data-pf]").forEach(function(el){
+                    ["input", "change"].forEach(function(ev){
+                        el.addEventListener(ev, saveAndApply)
+                    })
+                })
             }
             fillGroupSel(); fillFields();
             pg.addEventListener("change", async function(){
-                var v = pg.value;
-                n.naiParamGroup = v;
+                n.naiParamGroup = pg.value;
+                n.naiParams = (nlGetParamGroups()[pg.value] || {}).params || {};
                 await I.put(n);
                 fillFields();
-                nlApplyParamGroup(v) && E("已切换并应用参数组「"+v+"」", "success");
-            });
-            i.querySelectorAll(".nl-dparam-btn").forEach(function(btn){
-                btn.addEventListener("click", async function(){
-                    var act = btn.getAttribute("data-pa");
-                    if (act === "new"){
-                        var nm = prompt("输入新参数组名称：");
-                        if (!nm || !(nm = nm.trim())) return;
-                        if (nlGetParamGroups()[nm]) return void E("已存在同名参数组", "error");
-                        nlCreateParamGroup(nm);
-                        n.naiParamGroup = nm; await I.put(n);
-                        fillGroupSel(); fillFields();
-                        E("已创建参数组「"+nm+"」", "success");
-                    } else if (act === "rename"){
-                        var old = curGroup();
-                        if (!old) return void E("暂无参数组", "warning");
-                        if (old === NL_DEFAULT_PARAM_GROUP) return void E("默认组不可重命名", "warning");
-                        var nn = prompt("重命名参数组「"+old+"」为：", old);
-                        if (!nn || !(nn = nn.trim()) || nn === old) return;
-                        if (nlGetParamGroups()[nn]) return void E("已存在同名参数组", "error");
-                        if (!nlRenameParamGroup(old, nn)) return void E("重命名失败", "error");
-                        n.naiParamGroup = nn; await I.put(n);
-                        fillGroupSel(); fillFields();
-                        E("已重命名为「"+nn+"」", "success");
-                    } else if (act === "del"){
-                        var d = curGroup();
-                        if (!d) return void E("暂无参数组", "warning");
-                        if (d === NL_DEFAULT_PARAM_GROUP) return void E("默认组不可删除", "warning");
-                        if (!confirm("删除参数组「"+d+"」？")) return;
-                        if (!nlDeleteParamGroup(d)) return void E("删除失败", "error");
-                        if (n.naiParamGroup === d){ n.naiParamGroup = ""; await I.put(n); }
-                        fillGroupSel(); fillFields();
-                        E("已删除参数组「"+d+"」", "success");
-                    } else if (act === "save"){
-                        var sg = curGroup();
-                        if (!sg) return void E("请先新建参数组", "warning");
-                        var params = nlReadParamFieldInputs(pf, "nl-dparam-pf-");
-                        nlSaveParamGroup(sg, params);
-                        E("已保存参数组「"+sg+"」", "success");
-                    } else if (act === "apply"){
-                        var ag = curGroup();
-                        if (!ag) return void E("暂无参数组", "warning");
-                        nlApplyParamGroup(ag) ? E("已应用参数组「"+ag+"」到智绘姬", "success") : E("应用失败，请确认智绘姬面板已打开", "warning");
-                    }
-                });
+                nlApplyParamGroup(pg.value);
             });
         })();
         const $ = i.querySelector("#nl-dthumbimg"),
@@ -3205,7 +3232,7 @@
                     i = r && r.thumb ? '<img class="nl-vibe-slot-thumb" src="' + r.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
                     o = "number" == typeof e.strength ? e.strength : .6;
                 return '<div class="nl-vibe-slot" data-slot="' + n + '">' + i + '<div class="nl-vibe-slot-body"><div class="nl-vibe-slot-name">' + k(a) + '</div><label class="nl-vibe-row"><span>强度 <b class="nl-slot-strv">' + o.toFixed(2) + '</b></span><input type="range" class="nl-slot-strength" data-slot="' + n + '" min="0" max="1" step="0.01" value="' + o + '"></label></div><span class="nl-vibe-slot-del" data-slot="' + n + '" title="移出组">✕</span></div>'
-            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
+            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><label class="nl-toggleline" style="gap:4px;font-size:12px;white-space:nowrap;"><input type="checkbox" id="nl-vibe-enable" ' + (W().enableVibeGroupTransfer === "true" ? "checked" : "") + '>启用</label><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
             function(e) {
                 e.querySelectorAll(".nl-vibe-add").forEach(function(e) {
                     e.addEventListener("click", function() {
@@ -3253,6 +3280,10 @@
                 var i = e.querySelector("#nl-vibe-groupsel");
                 i && i.addEventListener("change", function() {
                     nlConfirmVibePending() ? (oeSetCurrentGroup(i.value), le()) : i.value = oe
+                });
+                var nlVibeEnable = e.querySelector("#nl-vibe-enable");
+                nlVibeEnable && nlVibeEnable.addEventListener("change", async function() {
+                    oeSyncEnabled(nlVibeEnable.checked), nlVibeEnable.checked && await ie(oe), E(nlVibeEnable.checked ? "已启用当前 Vibe 组" : "已关闭 Vibe 组", "success")
                 });
                 var o = e.querySelector("#nl-vibe-newgroup");
                 o && o.addEventListener("click", function() {
