@@ -3,7 +3,7 @@
    弹窗内检查是否最新、显示更新内容、可选更新。不会自动检测。 */
 (function() {
     "use strict";
-    var LOCAL_VERSION = "1.4.4";
+    var LOCAL_VERSION = "1.4.3";
     var EXT_NAME = "/nai-preset-switcher"; // 扩展文件夹名，服务端会补全为 third-party/<name>
     var PANEL_ID = "nai-lib-panel-v2";
     var BAR_ID = "nai-update-bar";
@@ -2913,13 +2913,13 @@
         return e
     }
     function nlVibeExportFileName(e) {
-        return "NAI-Vibe组-" + String(e || "未命名").replace(/[\\/:*?"<>| -]/g, "_").slice(0, 60) + ".json"
+        return "NAI-Vibe组-" + String(e || "未命名").replace(/[\/:*?"<>| -]/g, "_").slice(0, 60) + ".json"
     }
 
-    async function nlExportVibeGroup(e) {
+    async function nlBuildVibeGroupExport(e) {
         var t = re(),
             n = t && t[e];
-        if (!n) return E("未找到当前 Vibe 组", "error"), !1;
+        if (!n) return E("未找到当前 Vibe 组", "error"), null;
         var r = W(),
             a = r && r.vibePresets || {},
             i = {},
@@ -2951,26 +2951,76 @@
             }
         } catch (e) {}
         var x = {
-                identifier: "nai-preset-switcher-vibe-group",
-                version: 1,
-                exportedAt: (new Date).toISOString(),
-                groupName: e,
-                group: c,
-                presets: o,
-                storageItems: l
-            },
-            h = new Blob([JSON.stringify(x, null, 2)], {
-                type: "application/json"
-            }),
-            w = URL.createObjectURL(h),
-            y = s.createElement("a");
-        y.href = w, y.download = nlVibeExportFileName(e), y.style.display = "none", s.body.appendChild(y), y.click(), setTimeout(function() {
-            URL.revokeObjectURL(w), y.remove()
-        }, 0);
-        E("已导出组「" + e + "」", "success");
-        return !0
+            identifier: "nai-preset-switcher-vibe-group",
+            version: 1,
+            exportedAt: (new Date).toISOString(),
+            groupName: e,
+            group: c,
+            presets: o,
+            storageItems: l
+        };
+        return {
+            fileName: nlVibeExportFileName(e),
+            json: JSON.stringify(x, null, 2)
+        }
     }
 
+    function nlDownloadVibeGroupExport(e, t) {
+        var n = new Blob([t], {
+                type: "application/json;charset=utf-8"
+            }),
+            r = URL.createObjectURL(n),
+            a = s.createElement("a");
+        a.href = r, a.download = e, a.style.display = "none", s.body.appendChild(a), a.click(), setTimeout(function() {
+            URL.revokeObjectURL(r), a.remove()
+        }, 500)
+    }
+
+    async function nlExportVibeGroup(e) {
+        var t = await nlBuildVibeGroupExport(e);
+        if (!t) return !1;
+        var n = s.createElement("div"),
+            r = s.createElement("div"),
+            a = s.createElement("div"),
+            i = s.createElement("div"),
+            o = s.createElement("textarea"),
+            l = s.createElement("div"),
+            c = s.createElement("button"),
+            d = s.createElement("button"),
+            p = s.createElement("button"),
+            u = function() {
+                n.remove()
+            };
+        n.style.cssText = "position:fixed;inset:0;z-index:100003;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:18px;";
+        r.style.cssText = "width:min(620px,96vw);max-height:88vh;overflow:auto;border-radius:18px;background:#fff;color:#263238;box-shadow:0 16px 50px rgba(0,0,0,.28);padding:18px;";
+        a.style.cssText = "font-size:18px;font-weight:700;margin-bottom:8px;";
+        a.textContent = "导出 Vibe 组：「" + e + "」";
+        i.style.cssText = "font-size:13px;opacity:.72;margin-bottom:12px;line-height:1.5;";
+        i.textContent = "点击“下载到本地”保存 JSON 文件，之后可以发给别人用于导入。下面也保留了可复制的导出内容。";
+        o.style.cssText = "width:100%;height:260px;box-sizing:border-box;border:1px solid rgba(0,0,0,.18);border-radius:12px;padding:10px;font-size:12px;line-height:1.45;font-family:monospace;resize:vertical;background:#fafafa;color:#263238;";
+        o.value = t.json;
+        l.style.cssText = "display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;";
+        c.className = d.className = p.className = "nl-btn ghost";
+        c.textContent = "下载到本地";
+        d.textContent = "复制 JSON";
+        p.textContent = "关闭";
+        c.addEventListener("click", function() {
+            nlDownloadVibeGroupExport(t.fileName, o.value), E("已开始下载「" + t.fileName + "」", "success")
+        });
+        d.addEventListener("click", async function() {
+            try {
+                await navigator.clipboard.writeText(o.value), E("已复制导出 JSON", "success")
+            } catch (e) {
+                o.focus(), o.select(), E("请手动复制文本框内容", "warning")
+            }
+        });
+        p.addEventListener("click", u);
+        n.addEventListener("click", function(e) {
+            e.target === n && u()
+        });
+        l.appendChild(c), l.appendChild(d), l.appendChild(p), r.appendChild(a), r.appendChild(i), r.appendChild(o), r.appendChild(l), n.appendChild(r), s.body.appendChild(n);
+        return !0
+    }
 
     function Z(e, t) {
         if (!e || !t) return !1;
