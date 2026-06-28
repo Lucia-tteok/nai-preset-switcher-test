@@ -2076,8 +2076,8 @@
             }).join("") + '<span class="nl-chip" id="nl-addcat-chip" data-fcat="__addnew__" style="font-size:14px;cursor:pointer;">+</span>';
         let q;
         q = L.length ? `<div class="nl-grid${"list"===v?" list-mode":""}">` + L.map(e => {
-            const t = e.thumb ? `<img class="nl-thumb" src="${e.thumb}" decoding="async" loading="lazy">` : '<div class="nl-thumb empty">&#128247;</div>';
-            return `<div class="nl-card${e.name===a?" is-current":""}${b&&g.has(e.id)?" selected":""}" data-id="${e.id}">${t}<div class="nl-cardinfo"><div class="nl-cardname">${k(e.name||"未命名")}</div><div class="nl-tags">${h(e).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")}</div></div>\n</div>`
+            const t = e.thumb ? `<img class="nl-thumb" draggable="false" oncontextmenu="return false" src="${e.thumb}" decoding="async" loading="lazy">` : '<div class="nl-thumb empty">&#128247;</div>';
+            return `<div oncontextmenu="return false" class="nl-card${e.name===a?" is-current":""}${b&&g.has(e.id)?" selected":""}" data-id="${e.id}">${t}<div class="nl-cardinfo"><div class="nl-cardname">${k(e.name||"未命名")}</div><div class="nl-tags">${h(e).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")}</div></div>\n</div>`
         }).join("") + "</div>" : '<div class="nl-empty">还没有收藏，去"导入预设"标签添加吧</div>', t.innerHTML = `\n<div style="margin-bottom:10px;"><div class="nl-chips" id="nl-filter">${j}</div>\n</div>\n<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><div class="nl-search-wrap"><input type="text" class="nl-search" id="nl-search-input" placeholder="搜索预设名称..." value="${k(u)}"></div><span class="nl-viewtoggle" id="nl-viewtoggle" title="${"grid"===v?"列表视图":"网格视图"}">${"grid"===v?"☰":"☷"}</span><span class="nl-viewtoggle" id="nl-randpick" title="随机抽取">⚄</span><span class="nl-viewtoggle" id="nl-multisel-btn" title="多选" style="${b?"background:var(--nl-accent);color:#fff;border-color:var(--nl-accent);":""}">${b?"✕":"☑"}</span>\n</div>\n${b?'<div class="nl-multibar" id="nl-multibar"><span style="font-size:13px;color:#566472;" id="nl-selcount">已选 0 项</span><button class="nl-btn ghost" id="nl-sel-all" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">全选</button><button class="nl-btn ghost" id="nl-sel-tag" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">改标签</button><button class="nl-btn ghost" id="nl-sel-auto" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">自动分类</button><button class="nl-btn danger" id="nl-sel-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button></div>':""}\n${q}`, t.querySelectorAll(".nl-chip[data-fcat]").forEach(e => {
             e.addEventListener("click", () => {
                 const t = e.getAttribute("data-fcat");
@@ -2348,6 +2348,7 @@
             }
             cont.querySelectorAll(".nl-card").forEach(function(card) {
                 card.addEventListener("pointerdown", function(ev) {
+                    if (ev.target && ev.target.tagName && "img" === ev.target.tagName.toLowerCase()) ev.preventDefault();
                     if (b) return;
                     sx = ev.clientX;
                     sy = ev.clientY;
@@ -2678,7 +2679,7 @@
                                 return t.vibeDataId === e.vibeDataId
                             })[0],
                             a = t ? t.name : "（未知）" + (e.vibeDataId || "").slice(0, 8),
-                            i = t && t.thumb ? '<img class="nl-vibe-slot-thumb" src="' + t.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
+                            i = t && t.thumb ? '<img class="nl-vibe-slot-thumb" draggable="false" oncontextmenu="return false" src="' + t.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
                             o = "number" == typeof n.vibeStrengths[e.vibeDataId] ? n.vibeStrengths[e.vibeDataId] : "number" == typeof e.strength ? e.strength : .6;
                         return '<div class="nl-vibe-slot" data-vid="' + k(e.vibeDataId) + '">' + i + '<div class="nl-vibe-slot-body"><div class="nl-vibe-slot-name">' + k(a) + '</div><label class="nl-vibe-row"><span>强度 <b class="nl-slot-strv">' + o.toFixed(2) + '</b></span><input type="range" class="nl-dslot-strength" data-vid="' + k(e.vibeDataId) + '" min="0" max="1" step="0.01" value="' + o + '"></label></div></div>'
                     }).join(""), g.querySelectorAll(".nl-dslot-strength").forEach(function(e) {
@@ -2979,20 +2980,27 @@
     async function nlExportVibeGroup(e) {
         var t = await nlBuildVibeGroupExport(e);
         if (!t) return !1;
-        var n = s.createElement("div"),
-            r = s.createElement("div"),
-            a = s.createElement("div"),
-            i = s.createElement("div"),
-            o = s.createElement("textarea"),
-            l = s.createElement("div"),
-            c = s.createElement("button"),
-            d = s.createElement("button"),
-            p = s.createElement("button"),
+        var q = function() {
+                try {
+                    return W().document || s
+                } catch (e) {
+                    return s
+                }
+            }(),
+            n = q.createElement("div"),
+            r = q.createElement("div"),
+            a = q.createElement("div"),
+            i = q.createElement("div"),
+            o = q.createElement("textarea"),
+            l = q.createElement("div"),
+            c = q.createElement("button"),
+            d = q.createElement("button"),
+            p = q.createElement("button"),
             u = function() {
                 n.remove()
             };
-        n.style.cssText = "position:fixed;inset:0;z-index:100003;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:18px;";
-        r.style.cssText = "width:min(620px,96vw);max-height:88vh;overflow:auto;border-radius:18px;background:#fff;color:#263238;box-shadow:0 16px 50px rgba(0,0,0,.28);padding:18px;";
+        n.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:18px;";
+        r.style.cssText = "position:relative;z-index:2147483647;width:min(620px,96vw);max-height:88vh;overflow:auto;border-radius:18px;background:#fff;color:#263238;box-shadow:0 16px 50px rgba(0,0,0,.28);padding:18px;";
         a.style.cssText = "font-size:18px;font-weight:700;margin-bottom:8px;";
         a.textContent = "导出 Vibe 组：「" + e + "」";
         i.style.cssText = "font-size:13px;opacity:.72;margin-bottom:12px;line-height:1.5;";
@@ -3018,7 +3026,7 @@
         n.addEventListener("click", function(e) {
             e.target === n && u()
         });
-        l.appendChild(c), l.appendChild(d), l.appendChild(p), r.appendChild(a), r.appendChild(i), r.appendChild(o), r.appendChild(l), n.appendChild(r), s.body.appendChild(n);
+        l.appendChild(c), l.appendChild(d), l.appendChild(p), r.appendChild(a), r.appendChild(i), r.appendChild(o), r.appendChild(l), n.appendChild(r), (q.body || s.body).appendChild(n);
         return !0
     }
 
@@ -3385,10 +3393,10 @@
             }();
         let i;
         a && n[a] ? oe = a : oe && n[oe] || (oe = a), i = t.length ? '<div class="nl-vibe-grid">' + t.map(function(e) {
-            var t = e.thumb ? '<img class="nl-vibe-card-thumb" src="' + e.thumb + '">' : '<div class="nl-vibe-card-thumb empty">&#127912;</div>',
+            var t = e.thumb ? '<img class="nl-vibe-card-thumb" draggable="false" oncontextmenu="return false" src="' + e.thumb + '">' : '<div class="nl-vibe-card-thumb empty">&#127912;</div>',
                 n = k(e.presetName),
                 r = k(e.vibeDataId || "");
-            return '<div class="nl-vibe-card" data-preset="' + n + '" data-vid="' + r + '">' + t + '<div class="nl-vibe-card-name">' + k(e.name || "未命名") + '</div><div class="nl-vibe-card-acts"><span class="nl-vibe-add" data-vid="' + r + '" title="加入当前组">＋</span><span class="nl-vibe-del" data-preset="' + n + '" title="删除">✕</span></div></div>'
+            return '<div oncontextmenu="return false" class="nl-vibe-card" data-preset="' + n + '" data-vid="' + r + '">' + t + '<div class="nl-vibe-card-name">' + k(e.name || "未命名") + '</div><div class="nl-vibe-card-acts"><span class="nl-vibe-add" data-vid="' + r + '" title="加入当前组">＋</span><span class="nl-vibe-del" data-preset="' + n + '" title="删除">✕</span></div></div>'
         }).join("") + "</div>" : '<div class="nl-empty" style="padding:18px;">还没有 Vibe，可先在智绘姬中导入后同步显示</div>';
         var o, l = Object.keys(n).sort(function(e, t) {
                 return "默认组" === e ? -1 : "默认组" === t ? 1 : e.localeCompare(t, "zh-CN")
@@ -3403,7 +3411,7 @@
                         return t.vibeDataId === e.vibeDataId
                     })[0],
                     a = r ? r.name : "（未知）" + (e.vibeDataId || "").slice(0, 8),
-                    i = r && r.thumb ? '<img class="nl-vibe-slot-thumb" src="' + r.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
+                    i = r && r.thumb ? '<img class="nl-vibe-slot-thumb" draggable="false" oncontextmenu="return false" src="' + r.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
                     o = "number" == typeof e.strength ? e.strength : .6;
                 return '<div class="nl-vibe-slot" data-slot="' + n + '">' + i + '<div class="nl-vibe-slot-body"><div class="nl-vibe-slot-name">' + k(a) + '</div><label class="nl-vibe-row"><span>强度 <b class="nl-slot-strv">' + o.toFixed(2) + '</b></span><input type="range" class="nl-slot-strength" data-slot="' + n + '" min="0" max="1" step="0.01" value="' + o + '"></label></div><span class="nl-vibe-slot-del" data-slot="' + n + '" title="移出组">✕</span></div>'
             }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-exportgroup">导出组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
