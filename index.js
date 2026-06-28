@@ -478,7 +478,35 @@
         t && (t.style.display = e ? "none" : "flex")
     }
 
+    function nlDebugLog(msg) {
+        try {
+            var box = s.getElementById("nl-debug-overlay");
+            if (!box) {
+                box = s.createElement("div");
+                box.id = "nl-debug-overlay";
+                box.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:40vh;overflow:auto;z-index:2147483647;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.45 monospace;padding:6px 8px;white-space:pre-wrap;";
+                var clr = s.createElement("div");
+                clr.textContent = "[clear]";
+                clr.style.cssText = "color:#ff0;cursor:pointer;float:right;padding:0 6px;";
+                clr.addEventListener("click", function() { box.innerHTML = ""; box.appendChild(clr); });
+                box.appendChild(clr);
+                s.body.appendChild(box);
+                s.addEventListener("click", function(ev) {
+                    var t = ev.target;
+                    var ef = null;
+                    try { ef = s.elementFromPoint(ev.clientX, ev.clientY); } catch (e) {}
+                    nlDebugLog("DOC click tgt=" + (t && (t.className || t.tagName)) + " top=" + (ef && (ef.className || ef.tagName)));
+                }, true);
+            }
+            var line = s.createElement("div");
+            line.textContent = new Date().toLocaleTimeString() + " " + msg;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        } catch (e) {}
+    }
+
     function nlOpenPresetSwitcherPanel() {
+        nlDebugLog("OPEN nlOpenPresetSwitcherPanel");
         var e = N();
         e && (e.style.display = "flex", nlSetFloatingBallPanelOpen(!0), M("lib"))
     }
@@ -1423,8 +1451,19 @@
             n.id = t, n.textContent = e, s.head.appendChild(n)
         }(), n = s.createElement("div"), n.id = r, n.innerHTML = `\n<div class="nl-box"><div class="nl-head"><span class="nl-title">${e}</span><div class="nl-tabs"><div class="nl-tab active" data-tab="lib">收藏库</div><div class="nl-tab" data-tab="vibe">Vibe 库</div><div class="nl-tab" data-tab="parse">设置</div></div><span class="nl-theme" title="日夜切换">◐</span><span class="nl-close">&times;</span></div><div class="nl-body" data-view="lib"></div><div class="nl-body" data-view="parse" style="display:none;"></div><div class="nl-body" data-view="vibe" style="display:none;"></div>\n</div>`, s.body.appendChild(n),
         n._nlClosePresetSwitcherPanel = function(e) {
-            e && (e.preventDefault(), e.stopPropagation());
-            nlConfirmVibePendingIfVibeTab() && (closeModal(), n.style.display = "none", nlSetFloatingBallPanelOpen(!1))
+            try {
+                nlDebugLog("CLOSE called type=" + (e && e.type) + " tgt=" + (e && e.target && (e.target.className || e.target.tagName)));
+                e && (e.preventDefault(), e.stopPropagation());
+                var ok = nlConfirmVibePendingIfVibeTab();
+                nlDebugLog("CLOSE confirm=" + ok + " before=" + n.style.display);
+                if (ok) {
+                    try { closeModal(); } catch (err) { nlDebugLog("CLOSE closeModal ERR:" + err); }
+                    n.style.display = "none";
+                    try { nlSetFloatingBallPanelOpen(!1); } catch (err) { nlDebugLog("CLOSE fab ERR:" + err); }
+                    nlDebugLog("CLOSE after=" + n.style.display);
+                    setTimeout(function() { nlDebugLog("CLOSE t+250 display=" + n.style.display); }, 250);
+                }
+            } catch (err) { nlDebugLog("CLOSE FATAL:" + err); }
         }, n._nlCloseBtn = n.querySelector(".nl-close"), n._nlCloseBtn.addEventListener("click", n._nlClosePresetSwitcherPanel), window.PointerEvent && n._nlCloseBtn.addEventListener("pointerup", n._nlClosePresetSwitcherPanel), (function() {
             try {
                 var _ns = _getNaiSettings();
@@ -3029,6 +3068,7 @@
             var r = s.createElement("div");
             r.id = n, r.className = "list-group-item flex-container flexGap5 interactable", r.title = e, r.tabIndex = 0, r.innerHTML = '<i class="fa-solid fa-chevron-down fa-fw"></i><span>' + e + "</span>";
             var a = function(e) {
+                nlDebugLog("OPEN ce type=" + (e && e.type));
                 e && (e.preventDefault(), e.stopPropagation()); var panel = N(); panel.style.display = "flex"; var active = panel.querySelector(".nl-tab.active"); active && active.getAttribute("data-tab") === "lib" ? R() : M("lib")
             };
             r.addEventListener("click", a), r.addEventListener("touchend", a);
