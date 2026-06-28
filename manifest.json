@@ -7,7 +7,7 @@
     "js": "index.js",
     "css": "",
     "author": "毫无疑问你就是我的天使",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "homePage": "https://github.com/Lucia-tteok/nai-preset-switcher",
-    "changelog": "v1.4.3\n新增：\n- 悬浮球：在设置中勾选开启\n- 查看预览图大图：预设中单击预览图查看大图，双击上传新的预览图进行更新\n- 智绘姬参数设置修改"
+    "changelog": "v1.4.4\n修复：\n- 移除移动端标题栏 by 署名\n- 更新中心改为读取 test 仓库更新日志\n\nv1.4.3\n新增：\n- 悬浮球：在设置中勾选开启\n- 查看预览图大图：预设中单击预览图查看大图，双击上传新的预览图进行更新\n- 智绘姬参数设置修改"
 }
