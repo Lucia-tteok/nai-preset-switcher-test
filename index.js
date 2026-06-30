@@ -1093,6 +1093,43 @@
         }
     }
 
+    async function oeGetActivePresetRecord() {
+        try {
+            var t = W(),
+                n = t && (t.yusheid_novelai || "").trim();
+            if (!n) return null;
+            return (await I.all()).filter(function(e) {
+                return (e.name || "").trim() === n
+            })[0] || null
+        } catch (e) {
+            return null
+        }
+    }
+
+    function oeSyncGroupToActivePreset(e) {
+        (async function() {
+            try {
+                var t = await oeGetActivePresetRecord();
+                t && (t.vibeGroup = e, t.vibeStrengths = {}, await I.put(t), oeRefreshDetailVibeViews(e))
+            } catch (e) {}
+        })()
+    }
+
+    function oeToggleVibeFromLib(e) {
+        oeSyncEnabled(e);
+        (async function() {
+            try {
+                var t = await oeGetActivePresetRecord();
+                t && (t.vibeEnabled = e, e && !t.vibeGroup && (t.vibeGroup = oe), await I.put(t));
+                var n = s.getElementById(r),
+                    a = n && n.querySelector("#nl-dvibe-enable");
+                a && a.checked !== e && (a.checked = e, a.dispatchEvent(new Event("change", {
+                    bubbles: !0
+                })))
+            } catch (e) {}
+        })()
+    }
+
     function nlGetChatuNaiParams() {
         var e = window.parent && window.parent.document || s,
             t = {};
@@ -2705,7 +2742,7 @@
         }
         var y = null;
         v && v.addEventListener("change", async function() {
-                n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), oeSyncEnabled(n.vibeEnabled), n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup), m()
+                n.vibeEnabled = v.checked, b && (b.disabled = !n.vibeEnabled), n.vibeEnabled && !n.vibeGroup && b && b.value && (n.vibeGroup = b.value), await I.put(n), oeSyncEnabled(n.vibeEnabled), n.vibeEnabled && n.vibeGroup && ie(n.vibeGroup), m(), function() { try { var lt = s.getElementById(r), lv = lt && lt.querySelector("#nl-vibe-enable"); lv && (lv.checked = n.vibeEnabled) } catch (e) {} }()
             }), b && b.addEventListener("change", async function() {
                 n.vibeGroup = b.value, n.vibeStrengths = {}, await I.put(n), n.vibeEnabled && (oeSyncEnabled(!0), ie(n.vibeGroup)), m()
             }),
@@ -3221,7 +3258,7 @@
                     i = r && r.thumb ? '<img class="nl-vibe-slot-thumb" draggable="false" oncontextmenu="return false" src="' + r.thumb + '">' : '<div class="nl-vibe-slot-thumb empty">&#127912;</div>',
                     o = "number" == typeof e.strength ? e.strength : .6;
                 return '<div class="nl-vibe-slot" data-slot="' + n + '">' + i + '<div class="nl-vibe-slot-body"><div class="nl-vibe-slot-name">' + k(a) + '</div><label class="nl-vibe-row"><span>强度 <b class="nl-slot-strv">' + o.toFixed(2) + '</b></span><input type="range" class="nl-slot-strength" data-slot="' + n + '" min="0" max="1" step="0.01" value="' + o + '"></label></div><span class="nl-vibe-slot-del" data-slot="' + n + '" title="移出组">✕</span></div>'
-            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
+            }).join("") : '<div class="nl-empty" style="padding:14px;">该组为空，去上方列表点「＋组」添加 Vibe（可叠加多个）</div>', e.innerHTML = '<div class="nl-vibe-sec-title">Vibe 列表</div><div class="nl-vibe-listwrap">' + i + '</div><div class="nl-vibe-sec-title" style="margin-top:18px;">Vibe 叠加组</div><div style="display:flex;align-items:center;gap:8px;margin:6px 0 8px;"><label class="nl-vibe-toggle" style="display:inline-flex;align-items:center;white-space:nowrap;margin:0;font-size:13px;color:#566472;cursor:pointer;"><input type="checkbox" id="nl-vibe-enable"' + (W() && "true" === W().enableVibeGroupTransfer ? " checked" : "") + '> 开启 Vibe</label></div><div class="nl-vibe-grouprow"><select class="nl-input" id="nl-vibe-groupsel" style="flex:1;">' + l + '</select><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-newgroup">新建组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-renamegroup">重命名</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-delgroup">删组</button><button class="nl-btn ghost nl-vibe-groupbtn" id="nl-vibe-savegroup">保存</button></div><div class="nl-vibe-slots">' + o + "</div>",
             function(e) {
                 e.querySelectorAll(".nl-vibe-add").forEach(function(e) {
                     e.addEventListener("click", function() {
@@ -3268,7 +3305,11 @@
                 });
                 var i = e.querySelector("#nl-vibe-groupsel");
                 i && i.addEventListener("change", function() {
-                    nlConfirmVibePending() ? (oeSetCurrentGroup(i.value), le()) : i.value = oe
+                    nlConfirmVibePending() ? (oeSetCurrentGroup(i.value), oeSyncGroupToActivePreset(i.value), le()) : i.value = oe
+                });
+                var ve = e.querySelector("#nl-vibe-enable");
+                ve && ve.addEventListener("change", function() {
+                    oeToggleVibeFromLib(ve.checked)
                 });
                 var o = e.querySelector("#nl-vibe-newgroup");
                 o && o.addEventListener("click", function() {
