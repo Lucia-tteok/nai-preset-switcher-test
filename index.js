@@ -1942,7 +1942,15 @@
                 n = _allrecs.find(e => (e.name || "").trim() === t) || null
             } catch (e) {}
             if (n && !confirm("已存在名为「" + t + "」的预设，继续保存将覆盖它，是否继续？")) return;
-            const vibeBinding = getCurrentVibeBinding(),
+            const vibeBinding = n ? {
+                    vibeEnabled: !!n.vibeEnabled,
+                    vibeGroup: n.vibeGroup || "默认组",
+                    vibeStrengths: n.vibeStrengths || {}
+                } : {
+                    vibeEnabled: !1,
+                    vibeGroup: "默认组",
+                    vibeStrengths: {}
+                },
                 _setpc = e.querySelector("#nl-settings-nai-params"),
                 naiParams = _setpc ? nlReadParamFieldInputs(_setpc, "nl-set-pf-") : nlGetSettingsNaiParams(e),
                 _activeParamGroup = nlGetActiveParamGroup(),
