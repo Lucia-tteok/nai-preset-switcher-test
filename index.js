@@ -1726,13 +1726,17 @@
         n._nlClosePresetSwitcherPanel = function(e) {
             try {
                 e && (e.preventDefault(), e.stopPropagation());
-                var ok = nlConfirmVibePendingIfVibeTab();
+                var ok = !0;
+                try { ok = nlConfirmVibePendingIfVibeTab(); } catch (err) { ok = !0; }
                 if (ok) {
                     try { closeModal(); } catch (err) {}
                     n.style.display = "none";
                     try { nlSetFloatingBallPanelOpen(!1); } catch (err) {}
                 }
-            } catch (err) {}
+            } catch (err) {
+                try { n.style.display = "none"; } catch (e2) {}
+                try { nlSetFloatingBallPanelOpen(!1); } catch (e2) {}
+            }
         }, n._nlCloseBtn = n.querySelector(".nl-close"), n._nlCloseBtn.addEventListener("click", n._nlClosePresetSwitcherPanel), window.PointerEvent && n._nlCloseBtn.addEventListener("pointerup", n._nlClosePresetSwitcherPanel), (function() {
             try {
                 var _ns = _getNaiSettings();
