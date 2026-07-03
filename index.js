@@ -1093,6 +1093,23 @@
         }
     }
 
+    function nlNormalizePresetContent(e) {
+        return (e || "").replace(/\r\n?/g, "\n").trim()
+    }
+
+    function nlFindDuplicatePresetContent(e, t, n) {
+        if (!t) return null;
+        var r = nlNormalizePresetContent(t.positive),
+            a = nlNormalizePresetContent(t.negative);
+        if (!r && !a) return null;
+        for (var i = 0; i < (e || []).length; i++) {
+            var o = e[i];
+            if (!o || n && o.id === n) continue;
+            if (nlNormalizePresetContent(o.positive) === r && nlNormalizePresetContent(o.negative) === a) return o
+        }
+        return null
+    }
+
     async function oeGetActivePresetRecord() {
         try {
             var t = W(),
@@ -1942,6 +1959,13 @@
                 n = _allrecs.find(e => (e.name || "").trim() === t) || null
             } catch (e) {}
             if (n && !confirm("已存在名为「" + t + "」的预设，继续保存将覆盖它，是否继续？")) return;
+            const positivePrompt = e.querySelector("#nl-pos").value || "",
+                negativePrompt = e.querySelector("#nl-neg").value || "",
+                duplicatePreset = nlFindDuplicatePresetContent(_allrecs, {
+                    positive: positivePrompt,
+                    negative: negativePrompt
+                }, n && n.id);
+            if (duplicatePreset && !confirm("已存在内容相同的预设「" + (duplicatePreset.name || "未命名") + "」，仍要继续保存吗？")) return;
             const vibeBinding = n ? {
                     vibeEnabled: !!n.vibeEnabled,
                     vibeGroup: n.vibeGroup || "默认组",
@@ -1958,8 +1982,8 @@
                     id: n ? n.id : S(),
                     name: t,
                     category: d.slice(),
-                    positive: e.querySelector("#nl-pos").value || "",
-                    negative: e.querySelector("#nl-neg").value || "",
+                    positive: positivePrompt,
+                    negative: negativePrompt,
                     source: c && c.source || "",
                     thumb: c && c.thumb || n && n.thumb || "",
                     createdAt: n && n.createdAt || Date.now(),
@@ -2111,7 +2135,15 @@
         });
         const d = "__all__" === p ? n : n.filter(e => h(e).includes(p)),
             $ = u.trim().toLowerCase(),
-            L = $ ? d.filter(e => (e.name || "").toLowerCase().includes($)) : d,
+            L = $ ? d.map((e, t) => {
+                var n = (e.name || "").toLowerCase().includes($),
+                    r = !n && ((e.positive || "").toLowerCase().includes($) || (e.negative || "").toLowerCase().includes($));
+                return n || r ? {
+                    item: e,
+                    rank: n ? 0 : 1,
+                    index: t
+                } : null
+            }).filter(Boolean).sort((e, t) => e.rank - t.rank || e.index - t.index).map(e => e.item) : d,
             j = c.map(e => {
                 const t = "__all__" === e ? "全部" : e;
                 return `<span class="nl-chip${e===p?" active":""}" data-fcat="${k(e)}">${k(t)}</span>`
