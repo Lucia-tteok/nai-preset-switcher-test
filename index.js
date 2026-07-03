@@ -2039,7 +2039,8 @@
     var J = !1;
     async function R() {
         const e = s.getElementById(r),
-            t = e.querySelector('.nl-body[data-view="lib"]');
+            t = e && e.querySelector('.nl-body[data-view="lib"]');
+        if (!t) return;
         await async function() {
             if (!J) {
                 J = !0;
@@ -2152,7 +2153,7 @@
         q = L.length ? `<div class="nl-grid${"list"===v?" list-mode":""}">` + L.map(e => {
             const t = e.thumb ? `<img class="nl-thumb" draggable="false" oncontextmenu="return false" src="${e.thumb}" decoding="async" loading="lazy">` : '<div class="nl-thumb empty">&#128247;</div>';
             return `<div oncontextmenu="return false" class="nl-card${e.name===a?" is-current":""}${b&&g.has(e.id)?" selected":""}" data-id="${e.id}">${t}<div class="nl-cardinfo"><div class="nl-cardname">${k(e.name||"未命名")}</div><div class="nl-tags">${h(e).map(e=>`<span class="nl-tag">${k(e)}</span>`).join("")}</div></div>\n</div>`
-        }).join("") + "</div>" : '<div class="nl-empty">还没有收藏，去"导入预设"标签添加吧</div>', t.innerHTML = `\n<div style="margin-bottom:10px;"><div class="nl-chips" id="nl-filter">${j}</div>\n</div>\n<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><div class="nl-search-wrap"><input type="text" class="nl-search" id="nl-search-input" placeholder="搜索预设名称..." value="${k(u)}"></div><span class="nl-viewtoggle" id="nl-viewtoggle" title="${"grid"===v?"列表视图":"网格视图"}">${"grid"===v?"☰":"☷"}</span><span class="nl-viewtoggle" id="nl-randpick" title="随机抽取">⚄</span><span class="nl-viewtoggle" id="nl-multisel-btn" title="多选" style="${b?"background:var(--nl-accent);color:#fff;border-color:var(--nl-accent);":""}">${b?"✕":"☑"}</span>\n</div>\n${b?'<div class="nl-multibar" id="nl-multibar"><span style="font-size:13px;color:#566472;" id="nl-selcount">已选 0 项</span><button class="nl-btn ghost" id="nl-sel-all" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">全选</button><button class="nl-btn ghost" id="nl-sel-tag" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">改标签</button><button class="nl-btn ghost" id="nl-sel-auto" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">自动分类</button><button class="nl-btn danger" id="nl-sel-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button></div>':""}\n${q}`, t.querySelectorAll(".nl-chip[data-fcat]").forEach(e => {
+        }).join("") + "</div>" : '<div class="nl-empty">还没有收藏，去"导入预设"标签添加吧</div>', t.innerHTML = `\n<div style="margin-bottom:10px;"><div class="nl-chips" id="nl-filter">${j}</div>\n</div>\n<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><div class="nl-search-wrap"><input type="text" class="nl-search" id="nl-search-input" placeholder="搜索名称或提示词..." value="${k(u)}"></div><span class="nl-viewtoggle" id="nl-viewtoggle" title="${"grid"===v?"列表视图":"网格视图"}">${"grid"===v?"☰":"☷"}</span><span class="nl-viewtoggle" id="nl-randpick" title="随机抽取">⚄</span><span class="nl-viewtoggle" id="nl-multisel-btn" title="多选" style="${b?"background:var(--nl-accent);color:#fff;border-color:var(--nl-accent);":""}">${b?"✕":"☑"}</span>\n</div>\n${b?'<div class="nl-multibar" id="nl-multibar"><span style="font-size:13px;color:#566472;" id="nl-selcount">已选 0 项</span><button class="nl-btn ghost" id="nl-sel-all" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">全选</button><button class="nl-btn ghost" id="nl-sel-tag" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">改标签</button><button class="nl-btn ghost" id="nl-sel-auto" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">自动分类</button><button class="nl-btn danger" id="nl-sel-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button></div>':""}\n${q}`, t.querySelectorAll(".nl-chip[data-fcat]").forEach(e => {
             e.addEventListener("click", () => {
                 const t = e.getAttribute("data-fcat");
                 if ("__addnew__" === t) {
@@ -2283,10 +2284,20 @@
             render();
         });
         const A = t.querySelector("#nl-search-input");
-        A && A.addEventListener("input", e => {
-            u = e.target.value, R();
-            var t = document.getElementById("nl-search-input");
-            t && (t.focus(), t.selectionStart = t.selectionEnd = t.value.length)
+        A && A.addEventListener("input", async e => {
+            var n = e.target.selectionStart,
+                r = e.target.selectionEnd;
+            u = e.target.value, await R(), requestAnimationFrame(() => {
+                var e = document.getElementById("nl-search-input");
+                if (e) {
+                    e.focus({
+                        preventScroll: !0
+                    });
+                    try {
+                        e.setSelectionRange(null == n ? e.value.length : n, null == r ? e.value.length : r)
+                    } catch (e) {}
+                }
+            })
         }), t.querySelectorAll(".nl-card").forEach(e => {
             e.addEventListener("click", () => {
                 const n = e.getAttribute("data-id");
