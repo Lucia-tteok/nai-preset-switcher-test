@@ -4,7 +4,7 @@
 (function() {
     "use strict";
     var LOCAL_VERSION = "1.4.4";
-    var EXT_NAME = "/nai-preset-switcher"; // 扩展文件夹名，服务端会补全为 third-party/<name>
+    var EXT_NAME = "/nai-preset-switcher-test"; // 扩展文件夹名，服务端会补全为 third-party/<name>
     var PANEL_ID = "nai-lib-panel-v2";
     var BAR_ID = "nai-update-bar";
     var MODAL_ID = "nai-update-modal";
