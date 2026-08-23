@@ -675,7 +675,7 @@
         params = params || {};
         return NAI_PARAM_FIELDS.map(function(f) {
             var val = f.id in params ? params[f.id] : "";
-            if ("novelai_seed" === f.id) return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<span style="display:flex;align-items:center;gap:6px;margin-top:4px;"><input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:0;min-width:0;flex:1 1 auto;"><button type="button" class="nl-btn ghost" data-nl-export="1" title="导出画廊联动包" style="flex:0 0 auto;width:42px;padding:8px 6px!important;min-height:36px!important;font-size:19px!important;line-height:1!important;">⇩</button></span></label>';
+            if ("novelai_seed" === f.id) return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">&nbsp;<button type="button" class="nl-btn ghost" data-nl-export="1" title="一键导出" style="display:block;width:100%;height:54px;margin-top:4px;padding:9px 11px!important;font-size:14px!important;line-height:1.2!important;">一键导出</button></label>';
             if ("select" === f.type) {
                 var optsHtml = nlGetParamFieldOptions(f, val).map(function(o) {
                     var ov = void 0 !== o.v ? o.v : o,
