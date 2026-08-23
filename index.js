@@ -467,10 +467,6 @@
         type: "select",
         hostOptions: !0
     }, {
-        id: "novelai_straight_alpha",
-        label: "\u900f\u660e\u56fe\u7247 (straight_alpha)",
-        type: "checkbox"
-    }, {
         id: "novelai_sampler",
         label: "\u91c7\u6837\u65b9\u6cd5",
         type: "select",
@@ -528,6 +524,10 @@
     }, {
         id: "nai3Deceisp",
         label: "\u51cf\u5c11\u4f2a\u5f71 (Decrisp)",
+        type: "checkbox"
+    }, {
+        id: "novelai_straight_alpha",
+        label: "\u900f\u660e\u56fe\u7247 (straight_alpha)",
         type: "checkbox"
     }];
 
@@ -1672,6 +1672,149 @@
             });
         return n || await _restoreVibeImage(e)
     }
+
+    function nlExportTextImage(text) {
+        var canvas = s.createElement("canvas"),
+            ctx = canvas.getContext("2d"),
+            value = String(text || "未命名").trim() || "未命名";
+        if (!ctx || !canvas.toDataURL) throw new Error("当前环境不支持生成占位图片");
+        var maxWidth = 960,
+            lines = [],
+            current = "";
+        canvas.width = 1200, canvas.height = 800;
+        ctx.fillStyle = "#ffffff", ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#000000", ctx.textAlign = "center", ctx.textBaseline = "middle";
+        ctx.font = '600 56px sans-serif';
+        value.split(/\r?\n/).forEach(function(paragraph) {
+            Array.from(paragraph || " ").forEach(function(ch) {
+                var next = current + ch;
+                if (current && ctx.measureText(next).width > maxWidth) lines.push(current), current = ch;
+                else current = next
+            });
+            current && (lines.push(current), current = "")
+        });
+        lines.length || lines.push("未命名");
+        if (lines.length > 5) lines = lines.slice(0, 5), lines[4] = lines[4].replace(/.{1,3}$/, "…");
+        var lineHeight = 76,
+            startY = canvas.height / 2 - (lines.length - 1) * lineHeight / 2;
+        lines.forEach(function(line, index) { ctx.fillText(line, canvas.width / 2, startY + index * lineHeight, maxWidth) });
+        return canvas.toDataURL("image/png")
+    }
+
+    function nlExportImageExtension(dataUrl) {
+        var match = String(dataUrl || "").match(/^data:image\/([a-zA-Z0-9.+-]+)[;,]/),
+            type = match && match[1] ? match[1].toLowerCase() : "image";
+        return type === "jpeg" ? "jpg" : type === "svg+xml" ? "svg" : type.replace(/[^a-z0-9]/g, "") || "image"
+    }
+
+    function nlDownloadExportFile(name, text) {
+        var blob = new Blob([text], { type: "application/json;charset=utf-8" }),
+            url = URL.createObjectURL(blob),
+            a = s.createElement("a");
+        a.href = url;
+        a.download = name;
+        s.body.appendChild(a);
+        a.click();
+        setTimeout(function() { a.remove(); URL.revokeObjectURL(url) }, 1000)
+    }
+
+    async function nlExportGalleryPackage() {
+        var entries = await I.all(),
+            st = W() || {},
+            vibePresets = st.vibePresets || {},
+            vibeGroups = st.vibeGroups || {},
+            vibeMap = {},
+            missingVibeIds = {};
+        for (var name of Object.keys(vibePresets)) {
+            var vp = vibePresets[name];
+            if (!vp || !vp.vibeDataId) continue;
+            var stored = null;
+            try { stored = await D(vp.vibeDataId) } catch (e) {}
+            if (!stored || !stored.data) missingVibeIds[vp.vibeDataId] = true;
+            vibeMap[vp.vibeDataId] = {
+                id: vp.vibeDataId,
+                name: name,
+                model: vp.model || "",
+                strength: "number" == typeof vp.strength ? vp.strength : .6,
+                thumbnail: vp.thumbnail || "",
+                imageId: vp.imageId || null,
+                data: stored && stored.data || "",
+                type: stored && stored.type || "text"
+            }
+        }
+        var gallery = entries.map(function(ent) {
+            var refs = [];
+            if (ent.vibeEnabled && ent.vibeGroup && vibeGroups[ent.vibeGroup] && Array.isArray(vibeGroups[ent.vibeGroup].vibes)) {
+                refs = vibeGroups[ent.vibeGroup].vibes.map(function(slot) {
+                    var slotId = slot.vibeDataId || slot.vibe_data_id || "",
+                        v = vibeMap[slotId];
+                    if (!v && slotId) missingVibeIds[slotId] = true;
+                    return v ? { id: v.id, vibe_data_id: v.id, name: v.name, strength: "number" == typeof (ent.vibeStrengths || {})[v.id] ? ent.vibeStrengths[v.id] : slot.strength, data: v.data, type: v.type, thumbnail: v.thumbnail } : null
+                }).filter(Boolean)
+            }
+            var collectionId = String(ent.id || S()),
+                promptId = "prompt_" + collectionId,
+                imageId = "image_" + collectionId,
+                vibeGroupId = ent.vibeEnabled && ent.vibeGroup ? "vibe_group_" + ent.vibeGroup : "",
+                image = ent.thumb || nlExportTextImage(ent.name || "未命名");
+            return {
+                id: collectionId,
+                collection_id: collectionId,
+                image_id: imageId,
+                prompt_id: promptId,
+                title: ent.name || "未命名",
+                category: ["本地导入"],
+                positive_prompt: ent.positive || "",
+                negative_prompt: ent.negative || "",
+                params: ent.naiParams || {},
+                image: image,
+                image_data_url: image,
+                image_type: ent.thumb ? "data_url" : "generated_png_data_url",
+                image_mime: (image.match(/^data:(image\/[a-zA-Z0-9.+-]+)/) || [null, "image/" + nlExportImageExtension(image)])[1],
+                image_filename: collectionId + "." + nlExportImageExtension(image),
+                image_generated: !ent.thumb,
+                vibe_refs: refs,
+                vibe_group: ent.vibeEnabled ? ent.vibeGroup || "" : "",
+                vibe_group_id: vibeGroupId
+            }
+        });
+        var standalone = entries.filter(function(ent) { return !ent.thumb }).map(function(ent) { return ent.id }),
+            pkg = {
+                format: "nai-preset-switcher-gallery-export",
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                source: "nai-preset-switcher-test",
+                category: "本地导入",
+                collections: gallery.map(function(x) {
+                    return { id: x.collection_id, title: x.title, image_id: x.image_id, prompt_id: x.prompt_id, image_filename: x.image_filename, vibe_group_id: x.vibe_group_id }
+                }),
+                gallery: gallery,
+                images: gallery.map(function(x) { return { id: x.image_id, collection_id: x.collection_id, prompt_id: x.prompt_id, filename: x.image_filename, mime: x.image_mime, data_url: x.image_data_url, generated: !!x.image_generated } }),
+                prompts: gallery.map(function(x) { return { id: x.prompt_id, collection_id: x.collection_id, title: x.title, category: ["本地导入"], positive_prompt: x.positive_prompt, negative_prompt: x.negative_prompt, params: x.params, vibe_refs: x.vibe_refs, vibe_group_id: x.vibe_group_id } }),
+                vibes: Object.keys(vibeMap).map(function(id) {
+                    var v = vibeMap[id];
+                    return { id: v.id, name: v.name, model: v.model, strength: v.strength, image_id: v.imageId, thumbnail: v.thumbnail, data: v.data, type: v.type, missing: !v.data }
+                }),
+                vibe_groups: Object.keys(vibeGroups).map(function(name) {
+                    var group = vibeGroups[name] || {};
+                    return {
+                        id: "vibe_group_" + name,
+                        name: name,
+                        vibes: (Array.isArray(group.vibes) ? group.vibes : []).map(function(slot) {
+                            return {
+                                vibe_data_id: slot.vibeDataId || slot.vibe_data_id || "",
+                                strength: "number" == typeof slot.strength ? slot.strength : null
+                            }
+                        }).filter(function(slot) { return !!slot.vibe_data_id })
+                    }
+                }),
+                generated_placeholder_ids: standalone,
+                missing_vibe_ids: Object.keys(missingVibeIds),
+                import_notes: ["images.data_url 为离线导入图片内容", "image_id、prompt_id、collection_id 和 vibe_data_id 用于保持引用关系"]
+            };
+        nlDownloadExportFile("nai-gallery-local-import-" + Date.now() + ".json", JSON.stringify(pkg, null, 2));
+        E("已导出 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success")
+    }
     async function z(e) {
         const t = await q();
         return new Promise((n, r) => {
@@ -2337,7 +2480,7 @@
         }).join("") + '</div><div class="nl-empty" id="nl-search-empty" style="display:none;">没有匹配的预设</div>' : '<div class="nl-empty">还没有收藏，去"导入预设"标签添加吧</div>', t.innerHTML = `
 <div style="margin-bottom:10px;"><div class="nl-chips" id="nl-filter">${j}</div>
 </div>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><div class="nl-search-wrap"><input type="text" class="nl-search" id="nl-search-input" placeholder="搜索名称或提示词..." value="${k(u)}"></div><span class="nl-viewtoggle" id="nl-viewtoggle" title="${"grid"===v?"列表视图":"网格视图"}">${"grid"===v?"☰":"☷"}</span><span class="nl-viewtoggle" id="nl-randpick" title="随机抽取">⚄</span><span class="nl-viewtoggle" id="nl-multisel-btn" title="多选" style="${b?"background:var(--nl-accent);color:#fff;border-color:var(--nl-accent);":""}">${b?"✕":"☑"}</span>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;"><div class="nl-search-wrap"><input type="text" class="nl-search" id="nl-search-input" placeholder="搜索名称或提示词..." value="${k(u)}"></div><span class="nl-viewtoggle" id="nl-viewtoggle" title="${"grid"===v?"列表视图":"网格视图"}">${"grid"===v?"☰":"☷"}</span><span class="nl-viewtoggle" id="nl-randpick" title="随机抽取">⚄</span><span class="nl-viewtoggle" id="nl-export-btn" title="导出画廊联动包">⇩</span><span class="nl-viewtoggle" id="nl-multisel-btn" title="多选" style="${b?"background:var(--nl-accent);color:#fff;border-color:var(--nl-accent);":""}">${b?"✕":"☑"}</span>
 </div>
 ${b?'<div class="nl-multibar" id="nl-multibar"><span style="font-size:13px;color:#566472;" id="nl-selcount">已选 0 项</span><button class="nl-btn ghost" id="nl-sel-all" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">全选</button><button class="nl-btn ghost" id="nl-sel-tag" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">改标签</button><button class="nl-btn ghost" id="nl-sel-auto" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">自动分类</button><button class="nl-btn danger" id="nl-sel-del" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">删除</button></div>':""}
 ${q}`;
@@ -2709,6 +2852,10 @@ ${q}`;
                 card.addEventListener("pointercancel", endFn);
             });
         })();
+        var EX = t.querySelector("#nl-export-btn");
+        EX && EX.addEventListener("click", async function() {
+            try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
+        });
         var D = t.querySelector("#nl-multisel-btn");
         if (D && D.addEventListener("click", () => {
                 b = !b, g.clear(), R(!1)
