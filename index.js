@@ -1721,20 +1721,72 @@
             type = match && match[1] ? match[1].toLowerCase() : "image";
         return type === "jpeg" ? "jpg" : type === "svg+xml" ? "svg" : type.replace(/[^a-z0-9]/g, "") || "image"
     }
-
     var nlPendingExportFile = null;
 
-    async function nlDownloadExportFile(name, text, preferSystemSave) {
-        var blob = new Blob([text], { type: "application/json;charset=utf-8" }),
+    function nlZipCrc32(bytes) {
+        var crc = -1;
+        for (var i = 0; i < bytes.length; i++) {
+            crc ^= bytes[i];
+            for (var bit = 0; bit < 8; bit++) crc = crc >>> 1 ^ (crc & 1 ? 3988292384 : 0)
+        }
+        return (crc ^ -1) >>> 0
+    }
+
+    function nlZipUint16(value) {
+        return new Uint8Array([value & 255, value >>> 8 & 255])
+    }
+
+    function nlZipUint32(value) {
+        return new Uint8Array([value & 255, value >>> 8 & 255, value >>> 16 & 255, value >>> 24 & 255])
+    }
+
+    async function nlCreateSingleFileZip(filename, text) {
+        var encoder = new TextEncoder,
+            nameBytes = encoder.encode(filename),
+            source = encoder.encode(text),
+            compressed = source,
+            method = 0;
+        if ("CompressionStream" in window) try {
+            var stream = new Blob([source]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+            compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+            method = 8
+        } catch (e) {}
+        var now = new Date,
+            dosTime = (now.getHours() << 11 | now.getMinutes() << 5 | now.getSeconds() / 2) & 65535,
+            dosDate = (Math.max(1980, now.getFullYear()) - 1980 << 9 | now.getMonth() + 1 << 5 | now.getDate()) & 65535,
+            crc = nlZipCrc32(source),
+            localHeader = new Blob([
+                nlZipUint32(67324752), nlZipUint16(20), nlZipUint16(2048), nlZipUint16(method),
+                nlZipUint16(dosTime), nlZipUint16(dosDate), nlZipUint32(crc),
+                nlZipUint32(compressed.length), nlZipUint32(source.length),
+                nlZipUint16(nameBytes.length), nlZipUint16(0), nameBytes
+            ]),
+            centralHeader = new Blob([
+                nlZipUint32(33639248), nlZipUint16(20), nlZipUint16(20), nlZipUint16(2048),
+                nlZipUint16(method), nlZipUint16(dosTime), nlZipUint16(dosDate), nlZipUint32(crc),
+                nlZipUint32(compressed.length), nlZipUint32(source.length),
+                nlZipUint16(nameBytes.length), nlZipUint16(0), nlZipUint16(0), nlZipUint16(0),
+                nlZipUint16(0), nlZipUint32(0), nlZipUint32(0), nameBytes
+            ]),
+            centralOffset = localHeader.size + compressed.length,
+            end = new Blob([
+                nlZipUint32(101010256), nlZipUint16(0), nlZipUint16(0), nlZipUint16(1),
+                nlZipUint16(1), nlZipUint32(centralHeader.size), nlZipUint32(centralOffset), nlZipUint16(0)
+            ]);
+        return new Blob([localHeader, compressed, centralHeader, end], { type: "application/zip" })
+    }
+
+    async function nlDownloadExportFile(name, content, mimeType, preferSystemSave) {
+        var blob = content instanceof Blob ? content : new Blob([content], { type: mimeType || "application/octet-stream" }),
             file = null;
-        nlPendingExportFile = { name: name, text: text, expires: Date.now() + 120000 };
+        nlPendingExportFile = { name: name, blob: blob, mimeType: blob.type, expires: Date.now() + 120000 };
         try { file = new File([blob], name, { type: blob.type }) } catch (e) {}
         if (preferSystemSave) {
             try {
                 if (window.showSaveFilePicker) {
                     var handle = await window.showSaveFilePicker({
                         suggestedName: name,
-                        types: [{ description: "JSON 文件", accept: { "application/json": [".json"] } }]
+                        types: [{ description: "ZIP 压缩包", accept: { "application/zip": [".zip"] } }]
                     }), writable = await handle.createWritable();
                     await writable.write(blob);
                     await writable.close();
@@ -1775,7 +1827,7 @@
                 btn.textContent = "正在打开保存..."
             }
             try {
-                var mode = await nlDownloadExportFile(pending.name, pending.text, !0);
+                var mode = await nlDownloadExportFile(pending.name, pending.blob, pending.mimeType, !0);
                 E(("shared" === mode ? "已打开系统保存/分享面板" : "saved" === mode ? "文件已保存" : "已再次请求浏览器下载") + "：" + pending.name, "success")
             } catch (err) {
                 E("保存失败：" + (err && err.message || err), "error")
@@ -1907,10 +1959,13 @@
                 missing_vibe_ids: Object.keys(missingVibeIds),
                 import_notes: ["images.data_url 为离线导入图片内容", "image_id、prompt_id、collection_id 和 vibe_data_id 用于保持引用关系"]
             };
-        var filename = "nai-gallery-local-import-" + Date.now() + ".json",
-            saveMode = await nlDownloadExportFile(filename, JSON.stringify(pkg, null, 2)),
+        var baseName = "nai-gallery-local-import-" + Date.now(),
+            jsonFilename = baseName + ".json",
+            filename = baseName + ".zip",
+            zipBlob = await nlCreateSingleFileZip(jsonFilename, JSON.stringify(pkg, null, 2)),
+            saveMode = await nlDownloadExportFile(filename, zipBlob, "application/zip"),
             saveText = "shared" === saveMode ? "已打开系统保存/分享面板" : "saved" === saveMode ? "文件已保存" : "已请求浏览器下载";
-        E(saveText + "：" + filename + "；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success");
+        E(saveText + "：" + filename + "；解压后包含 1 个 JSON 文件；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success");
         return { filename: filename, count: gallery.length, vibeCount: Object.keys(vibeMap).length, saveMode: saveMode }
     }
     async function z(e) {
