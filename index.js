@@ -460,7 +460,16 @@
         id: "novelaimode",
         label: "\u6a21\u578b",
         type: "select",
-        options: ["nai-diffusion-3", "nai-diffusion-4-full", "nai-diffusion-4-curated-preview", "nai-diffusion-4-5-curated", "nai-diffusion-4-5-full"]
+        options: ["nai-diffusion-5-full", "nai-diffusion-5-curated", "nai-diffusion-3", "nai-diffusion-4-full", "nai-diffusion-4-curated-preview", "nai-diffusion-4-5-curated", "nai-diffusion-4-5-full"]
+    }, {
+        id: "UCP_novelai",
+        label: "\u8d1f\u9762\u8d28\u91cf\u9884\u8bbe",
+        type: "select",
+        hostOptions: !0
+    }, {
+        id: "novelai_straight_alpha",
+        label: "\u900f\u660e\u56fe\u7247 (straight_alpha)",
+        type: "checkbox"
     }, {
         id: "novelai_sampler",
         label: "\u91c7\u6837\u65b9\u6cd5",
@@ -646,14 +655,30 @@
         return groupName && nlGetParamGroups()[groupName] ? nlApplyParamGroup(groupName) : nlApplyChatuNaiParams(n)
     }
 
+    function nlGetParamFieldOptions(f, val) {
+        var options = f.options || [];
+        if (f.hostOptions) try {
+            var doc = window.parent && window.parent.document || s,
+                host = doc.getElementById(f.id);
+            host && host.options && host.options.length && (options = Array.from(host.options).map(function(o) {
+                return { v: o.value, t: o.textContent || o.label || o.value }
+            }))
+        } catch (e) {}
+        options = options.slice ? options.slice() : [];
+        var hasValue = options.some(function(o) {
+            return String(void 0 !== o.v ? o.v : o) === String(val)
+        });
+        return !hasValue && "" !== String(void 0 === val ? "" : val) && options.unshift({ v: val, t: val }), options
+    }
+
     function nlRenderParamFieldInputs(idPrefix, params) {
         params = params || {};
         return NAI_PARAM_FIELDS.map(function(f) {
             var val = f.id in params ? params[f.id] : "";
             if ("select" === f.type) {
-                var optsHtml = f.options.map(function(o) {
+                var optsHtml = nlGetParamFieldOptions(f, val).map(function(o) {
                     var ov = void 0 !== o.v ? o.v : o,
-                        ot = void 0 !== o.t ? o.t : o;
+                    ot = void 0 !== o.t ? o.t : o;
                     return '<option value="' + k(ov) + '"' + (String(val) === String(ov) ? " selected" : "") + ">" + k(ot) + "</option>"
                 }).join("");
                 return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<select class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" style="margin-top:4px;">' + optsHtml + "</select></label>"
@@ -1281,6 +1306,16 @@
         var e = window.parent && window.parent.document || s,
             t = {};
         [{
+            id: "novelaimode",
+            key: "naiModel"
+        }, {
+            id: "UCP_novelai",
+            key: "naiNegativeQualityPreset"
+        }, {
+            id: "novelai_straight_alpha",
+            key: "naiStraightAlpha",
+            type: "checkbox"
+        }, {
             id: "novelai_sampler",
             key: "naiSampler"
         }, {
@@ -1295,7 +1330,7 @@
         }].forEach(function(n) {
             try {
                 var r = e.getElementById(n.id);
-                r && (t[n.key] = r.value)
+                r && (t[n.key] = "checkbox" === n.type ? !!r.checked : r.value)
             } catch (e) {}
         });
         return t
@@ -1307,6 +1342,16 @@
             n = window.parent && (window.parent.jQuery || window.parent.$),
             r = !1;
         [{
+            id: "novelaimode",
+            key: "naiModel"
+        }, {
+            id: "UCP_novelai",
+            key: "naiNegativeQualityPreset"
+        }, {
+            id: "novelai_straight_alpha",
+            key: "naiStraightAlpha",
+            type: "checkbox"
+        }, {
             id: "novelai_sampler",
             key: "naiSampler"
         }, {
@@ -1322,11 +1367,14 @@
             try {
                 if (void 0 === e[a.key] || null === e[a.key]) return;
                 var i = t.getElementById(a.id);
-                i && (i.value = e[a.key], n ? n(i).val(e[a.key]).trigger("input").trigger("change") : (i.dispatchEvent(new Event("input", {
+                if (!i) return;
+                if ("checkbox" === a.type) i.checked = !!e[a.key], n ? n(i).prop("checked", !!e[a.key]).trigger("change") : i.dispatchEvent(new Event("change", { bubbles: !0 }));
+                else i.value = e[a.key], n ? n(i).val(e[a.key]).trigger("input").trigger("change") : (i.dispatchEvent(new Event("input", {
                     bubbles: !0
                 })), i.dispatchEvent(new Event("change", {
                     bubbles: !0
-                }))), r = !0)
+                })));
+                r = !0
             } catch (e) {}
         });
         return r
@@ -1339,6 +1387,9 @@
             return r ? r.value : n
         }
         return {
+            naiModel: t("#nl-set-nai-model", ""),
+            naiNegativeQualityPreset: t("#nl-set-nai-negative-quality", ""),
+            naiStraightAlpha: !!(e.querySelector("#nl-set-nai-straight-alpha") && e.querySelector("#nl-set-nai-straight-alpha").checked),
             naiSampler: t("#nl-set-nai-sampler", ""),
             naiSteps: t("#nl-set-nai-steps", ""),
             naiPromptGuidance: t("#nl-set-nai-guidance", ""),
