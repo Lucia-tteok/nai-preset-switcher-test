@@ -675,7 +675,7 @@
         params = params || {};
         return NAI_PARAM_FIELDS.map(function(f) {
             var val = f.id in params ? params[f.id] : "";
-            if ("novelai_seed" === f.id) return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">&nbsp;<button type="button" class="nl-btn ghost" data-nl-export="1" title="一键导出" style="display:block;width:100%;height:54px;margin-top:4px;padding:9px 11px!important;font-size:14px!important;line-height:1.2!important;">一键导出</button></label>';
+            if ("novelai_seed" === f.id) return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:4px;"></label><label style="font-size:12px;color:#566472;">&nbsp;<button type="button" class="nl-btn ghost" data-nl-export="1" title="一键导出" style="display:block;width:100%;margin-top:4px;padding:6px 11px!important;font-size:14px!important;line-height:1.2!important;">一键导出</button></label>';
             if ("select" === f.type) {
                 var optsHtml = nlGetParamFieldOptions(f, val).map(function(o) {
                     var ov = void 0 !== o.v ? o.v : o,
@@ -687,6 +687,20 @@
             if ("checkbox" === f.type) return '<label style="font-size:12px;color:#566472;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '"' + (val ? " checked" : "") + "> " + k(f.label) + "</label>";
             return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:4px;"></label>'
         }).join("")
+    }
+
+    function nlSyncExportButtonSize(container, idPrefix) {
+        if (!container) return;
+        var seed = container.querySelector("#" + idPrefix + "novelai_seed"),
+            btn = container.querySelector("[data-nl-export]");
+        if (!seed || !btn) return;
+        requestAnimationFrame(function() {
+            var height = Math.round(seed.getBoundingClientRect().height);
+            if (height > 0) {
+                btn.style.setProperty("height", height + "px", "important");
+                btn.style.setProperty("min-height", height + "px", "important")
+            }
+        })
     }
 
     function nlReadParamFieldInputs(container, idPrefix) {
@@ -1708,15 +1722,95 @@
         return type === "jpeg" ? "jpg" : type === "svg+xml" ? "svg" : type.replace(/[^a-z0-9]/g, "") || "image"
     }
 
-    function nlDownloadExportFile(name, text) {
+    var nlPendingExportFile = null;
+
+    async function nlDownloadExportFile(name, text, preferSystemSave) {
         var blob = new Blob([text], { type: "application/json;charset=utf-8" }),
-            url = URL.createObjectURL(blob),
+            file = null;
+        nlPendingExportFile = { name: name, text: text, expires: Date.now() + 120000 };
+        try { file = new File([blob], name, { type: blob.type }) } catch (e) {}
+        if (preferSystemSave) {
+            try {
+                if (window.showSaveFilePicker) {
+                    var handle = await window.showSaveFilePicker({
+                        suggestedName: name,
+                        types: [{ description: "JSON 文件", accept: { "application/json": [".json"] } }]
+                    }), writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    nlPendingExportFile = null;
+                    return "saved"
+                }
+            } catch (e) {
+                if (e && "AbortError" === e.name) throw new Error("已取消保存")
+            }
+            try {
+                if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: "NAI 画廊导出", text: "请选择保存到文件或发送到其他应用" });
+                    nlPendingExportFile = null;
+                    return "shared"
+                }
+            } catch (e) {
+                if (e && "AbortError" === e.name) throw new Error("已取消保存或分享")
+            }
+        }
+        var url = URL.createObjectURL(blob),
             a = s.createElement("a");
         a.href = url;
         a.download = name;
+        a.rel = "noopener";
+        a.style.display = "none";
         s.body.appendChild(a);
         a.click();
-        setTimeout(function() { a.remove(); URL.revokeObjectURL(url) }, 1000)
+        setTimeout(function() { a.remove(); URL.revokeObjectURL(url) }, 10000);
+        return "download"
+    }
+
+    async function nlRunGalleryExport(btn) {
+        if (btn && btn.disabled) return;
+        if (nlPendingExportFile && nlPendingExportFile.expires > Date.now()) {
+            var pending = nlPendingExportFile;
+            if (btn) {
+                btn.disabled = !0;
+                btn.textContent = "正在打开保存..."
+            }
+            try {
+                var mode = await nlDownloadExportFile(pending.name, pending.text, !0);
+                E(("shared" === mode ? "已打开系统保存/分享面板" : "saved" === mode ? "文件已保存" : "已再次请求浏览器下载") + "：" + pending.name, "success")
+            } catch (err) {
+                E("保存失败：" + (err && err.message || err), "error")
+            } finally {
+                if (btn) {
+                    btn.disabled = !1;
+                    btn.textContent = nlPendingExportFile ? "再次点击保存" : "一键导出"
+                }
+            }
+            return
+        }
+        nlPendingExportFile = null;
+        var oldText = btn && btn.textContent,
+            result = null;
+        if (btn) {
+            btn.disabled = !0;
+            btn.textContent = "正在导出...";
+            btn.setAttribute("aria-busy", "true")
+        }
+        E("正在整理收藏、图片和 Vibe 数据，通常需要 5–30 秒，请稍候", "info");
+        await new Promise(function(resolve) { setTimeout(resolve, 50) });
+        try {
+            result = await nlExportGalleryPackage();
+            return result
+        } catch (err) {
+            E("导出失败：" + (err && err.message || err), "error");
+            throw err
+        } finally {
+            if (btn) {
+                btn.disabled = !1;
+                btn.textContent = result && "download" === result.saveMode && nlPendingExportFile ? "再次点击保存" : oldText || "一键导出";
+                btn.title = nlPendingExportFile ? "如果没有自动下载，请再次点击打开系统保存" : "一键导出";
+                btn.removeAttribute("aria-busy")
+            }
+        }
     }
 
     async function nlExportGalleryPackage() {
@@ -1813,8 +1907,11 @@
                 missing_vibe_ids: Object.keys(missingVibeIds),
                 import_notes: ["images.data_url 为离线导入图片内容", "image_id、prompt_id、collection_id 和 vibe_data_id 用于保持引用关系"]
             };
-        nlDownloadExportFile("nai-gallery-local-import-" + Date.now() + ".json", JSON.stringify(pkg, null, 2));
-        E("已导出 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success")
+        var filename = "nai-gallery-local-import-" + Date.now() + ".json",
+            saveMode = await nlDownloadExportFile(filename, JSON.stringify(pkg, null, 2)),
+            saveText = "shared" === saveMode ? "已打开系统保存/分享面板" : "saved" === saveMode ? "文件已保存" : "已请求浏览器下载";
+        E(saveText + "：" + filename + "；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success");
+        return { filename: filename, count: gallery.length, vibeCount: Object.keys(vibeMap).length, saveMode: saveMode }
     }
     async function z(e) {
         const t = await q();
@@ -2218,6 +2315,7 @@
                 sel.value = cg || "";
                 fields.innerHTML = nlRenderParamFieldInputs("nl-set-pf-", gs[cg] && gs[cg].params || nlReadAllNaiParams());
                 bindFields();
+                nlSyncExportButtonSize(fields, "nl-set-pf-");
             }
             function saveApply(ev){
                 var cg = cur();
@@ -2237,7 +2335,7 @@
                     btn.addEventListener("click", async function(ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
-                        try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
+                        try { await nlRunGalleryExport(btn) } catch (err) {}
                     })
                 });
             }
@@ -3226,6 +3324,7 @@ EX && EX.remove();
                 var groups = nlGetParamGroups(), cg = curGroup(), g = groups[cg], params = g && g.params || {};
                 pf.innerHTML = nlRenderParamFieldInputs("nl-dparam-pf-", params);
                 bindFields();
+                nlSyncExportButtonSize(pf, "nl-dparam-pf-");
             }
             async function saveAndApply(ev){
                 var sg = curGroup();
@@ -3248,7 +3347,7 @@ function bindFields(){
                         btn.addEventListener("click", async function(ev){
                             ev.preventDefault();
                             ev.stopPropagation();
-                            try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
+                            try { await nlRunGalleryExport(btn) } catch (err) {}
                         })
                     })
                 }
