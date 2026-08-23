@@ -1569,9 +1569,18 @@
         return e.replace(/[&<>"']/g, e => t[e])
     }
 
-    function E(t, n) {
+    function E(t, n, autoHideMs) {
         try {
-            if (window.toastr) return void(toastr[n] || toastr.info)(t)
+            if (window.toastr) {
+                var toast = (toastr[n] || toastr.info)(t);
+                if (autoHideMs > 0) setTimeout(function() {
+                    try {
+                        if (toast && toast.fadeOut) toast.fadeOut();
+                        else if (toast && toast.remove) toast.remove()
+                    } catch (e) {}
+                }, autoHideMs);
+                return toast
+            }
         } catch (e) {}
         console.log("[" + e + "] " + t)
     }
@@ -1828,9 +1837,9 @@
             }
             try {
                 var mode = await nlDownloadExportFile(pending.name, pending.blob, pending.mimeType, !0);
-                E(("shared" === mode ? "已打开系统保存/分享面板" : "saved" === mode ? "文件已保存" : "已再次请求浏览器下载") + "：" + pending.name, "success")
+                E(("shared" === mode ? "已打开系统保存/分享面板" : "saved" === mode ? "文件已保存" : "已再次请求浏览器下载") + "：" + pending.name, "success", 5000)
             } catch (err) {
-                E("保存失败：" + (err && err.message || err), "error")
+                E("保存失败：" + (err && err.message || err), "error", 5000)
             } finally {
                 if (btn) {
                     btn.disabled = !1;
@@ -1853,7 +1862,7 @@
             result = await nlExportGalleryPackage();
             return result
         } catch (err) {
-            E("导出失败：" + (err && err.message || err), "error");
+            E("导出失败：" + (err && err.message || err), "error", 5000);
             throw err
         } finally {
             if (btn) {
@@ -1965,7 +1974,7 @@
             zipBlob = await nlCreateSingleFileZip(jsonFilename, JSON.stringify(pkg, null, 2)),
             saveMode = await nlDownloadExportFile(filename, zipBlob, "application/zip"),
             saveText = "shared" === saveMode ? "已打开系统保存/分享面板" : "saved" === saveMode ? "文件已保存" : "已请求浏览器下载";
-        E(saveText + "：" + filename + "；解压后包含 1 个 JSON 文件；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success");
+        E(saveText + "：" + filename + "；解压后包含 1 个 JSON 文件；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success", 5000);
         return { filename: filename, count: gallery.length, vibeCount: Object.keys(vibeMap).length, saveMode: saveMode }
     }
     async function z(e) {
