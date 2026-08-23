@@ -506,10 +506,6 @@
         label: "\u79cd\u5b50 (seed)",
         type: "number"
     }, {
-        id: "AI_use_coords",
-        label: "AI \u9ed8\u8ba4\u89d2\u8272\u4f4d\u7f6e",
-        type: "checkbox"
-    }, {
         id: "sm",
         label: "SMEA",
         type: "checkbox"
@@ -528,6 +524,10 @@
     }, {
         id: "novelai_straight_alpha",
         label: "\u900f\u660e\u56fe\u7247 (straight_alpha)",
+        type: "checkbox"
+    }, {
+        id: "AI_use_coords",
+        label: "AI \u9ed8\u8ba4\u89d2\u8272\u4f4d\u7f6e",
         type: "checkbox"
     }];
 
@@ -675,6 +675,7 @@
         params = params || {};
         return NAI_PARAM_FIELDS.map(function(f) {
             var val = f.id in params ? params[f.id] : "";
+            if ("novelai_seed" === f.id) return '<label style="font-size:12px;color:#566472;">' + k(f.label) + '<span style="display:flex;align-items:center;gap:6px;margin-top:4px;"><input type="number" class="nl-input" id="' + idPrefix + f.id + '" data-pf="' + k(f.id) + '" value="' + k(void 0 === val ? "" : val) + '" style="margin-top:0;min-width:0;flex:1 1 auto;"><button type="button" class="nl-btn ghost" data-nl-export="1" title="导出画廊联动包" style="flex:0 0 auto;width:42px;padding:8px 6px!important;min-height:36px!important;font-size:19px!important;line-height:1!important;">⇩</button></span></label>';
             if ("select" === f.type) {
                 var optsHtml = nlGetParamFieldOptions(f, val).map(function(o) {
                     var ov = void 0 !== o.v ? o.v : o,
@@ -2232,6 +2233,13 @@
                         el.addEventListener(ev, saveApply)
                     })
                 });
+                fields.querySelectorAll("[data-nl-export]").forEach(function(btn) {
+                    btn.addEventListener("click", async function(ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
+                    })
+                });
             }
             sel.addEventListener("change", function(){
                 refresh(sel.value);
@@ -2853,9 +2861,7 @@ ${q}`;
             });
         })();
         var EX = t.querySelector("#nl-export-btn");
-        EX && EX.addEventListener("click", async function() {
-            try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
-        });
+EX && EX.remove();
         var D = t.querySelector("#nl-multisel-btn");
         if (D && D.addEventListener("click", () => {
                 b = !b, g.clear(), R(!1)
@@ -3232,13 +3238,20 @@ ${q}`;
                 await I.put(n);
                 nlApplyParamGroup(sg);
             }
-            function bindFields(){
-                pf.querySelectorAll("[data-pf]").forEach(function(el){
-                    ["input", "change"].forEach(function(ev){
-                        el.addEventListener(ev, saveAndApply)
+function bindFields(){
+                    pf.querySelectorAll("[data-pf]").forEach(function(el){
+                        ["input", "change"].forEach(function(ev){
+                            el.addEventListener(ev, saveAndApply)
+                        })
+                    });
+                    pf.querySelectorAll("[data-nl-export]").forEach(function(btn){
+                        btn.addEventListener("click", async function(ev){
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            try { await nlExportGalleryPackage() } catch (err) { E("导出失败：" + (err && err.message || err), "error") }
+                        })
                     })
-                })
-            }
+                }
             fillGroupSel(); fillFields();
             pg.addEventListener("change", async function(){
                 n.naiParamGroup = pg.value;
