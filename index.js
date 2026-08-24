@@ -184,8 +184,31 @@
         if (text != null) d.textContent = text;
         return d;
     }
+    function renderChangelog(container, text) {
+        container.textContent = "";
+        var source = String(text || "").replace(/<a\s+[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>[^<]*<\/a>/gi, "$1");
+        var urlPattern = /(https?:\/\/[^\s<>]+)/g;
+        var cursor = 0;
+        var match;
+        while ((match = urlPattern.exec(source))) {
+            if (match.index > cursor) container.appendChild(D().createTextNode(source.slice(cursor, match.index)));
+            var link = D().createElement("a");
+            link.href = match[1].replace(/[。。，,）)]+$/, "");
+            link.textContent = "点击前往";
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.style.color = "#72b7ff";
+            link.style.textDecoration = "underline";
+            container.appendChild(link);
+            var consumed = match[1].length - link.href.length;
+            if (consumed > 0) container.appendChild(D().createTextNode(match[1].slice(link.href.length)));
+            cursor = match.index + match[1].length;
+        }
+        if (cursor < source.length) container.appendChild(D().createTextNode(source.slice(cursor)));
+    }
 
     function closeModal() {
+
         var m = D().getElementById(MODAL_ID);
         if (m && m.parentNode) m.parentNode.removeChild(m);
     }
@@ -252,7 +275,7 @@
         // 显示更新日志
         if (info.changelog) {
             logWrap.style.display = "block";
-            logBox.textContent = info.changelog;
+            renderChangelog(logBox, info.changelog);
         }
 
         // 显示检查结果
