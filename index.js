@@ -212,7 +212,7 @@
             if (urlMatch.index > urlCursor) container.appendChild(D().createTextNode(rest.slice(urlCursor, urlMatch.index)));
             var urlLink = D().createElement("a");
             urlLink.href = urlMatch[1].replace(/[。。，,）)]+$/, "");
-            urlLink.textContent = "点击前往";
+            urlLink.textContent = urlLink.href;
             urlLink.target = "_blank";
             urlLink.rel = "noopener noreferrer";
             urlLink.style.color = "#72b7ff";
