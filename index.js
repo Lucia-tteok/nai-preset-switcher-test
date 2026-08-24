@@ -186,25 +186,41 @@
     }
     function renderChangelog(container, text) {
         container.textContent = "";
-        var source = String(text || "").replace(/<a\s+[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>[^<]*<\/a>/gi, "$1");
-        var urlPattern = /(https?:\/\/[^\s<>]+)/g;
+        var source = String(text || "");
+        var pattern = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
         var cursor = 0;
         var match;
-        while ((match = urlPattern.exec(source))) {
+        while ((match = pattern.exec(source))) {
             if (match.index > cursor) container.appendChild(D().createTextNode(source.slice(cursor, match.index)));
             var link = D().createElement("a");
-            link.href = match[1].replace(/[。。，,）)]+$/, "");
-            link.textContent = "点击前往";
+            link.href = match[2].replace(/[。。，,）)]+$/, "");
+            link.textContent = match[1] || link.href;
             link.target = "_blank";
             link.rel = "noopener noreferrer";
             link.style.color = "#72b7ff";
             link.style.textDecoration = "underline";
             container.appendChild(link);
-            var consumed = match[1].length - link.href.length;
-            if (consumed > 0) container.appendChild(D().createTextNode(match[1].slice(link.href.length)));
-            cursor = match.index + match[1].length;
+            cursor = match.index + match[0].length;
         }
-        if (cursor < source.length) container.appendChild(D().createTextNode(source.slice(cursor)));
+        var rest = source.slice(cursor).replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, function(_, label, href) {
+            return label + " (" + href + ")";
+        });
+        var urlPattern = /(https?:\/\/[^\s<>]+)/g;
+        var urlCursor = 0;
+        var urlMatch;
+        while ((urlMatch = urlPattern.exec(rest))) {
+            if (urlMatch.index > urlCursor) container.appendChild(D().createTextNode(rest.slice(urlCursor, urlMatch.index)));
+            var urlLink = D().createElement("a");
+            urlLink.href = urlMatch[1].replace(/[。。，,）)]+$/, "");
+            urlLink.textContent = "点击前往";
+            urlLink.target = "_blank";
+            urlLink.rel = "noopener noreferrer";
+            urlLink.style.color = "#72b7ff";
+            urlLink.style.textDecoration = "underline";
+            container.appendChild(urlLink);
+            urlCursor = urlMatch.index + urlMatch[1].length;
+        }
+        if (urlCursor < rest.length) container.appendChild(D().createTextNode(rest.slice(urlCursor)));
     }
 
     function closeModal() {
