@@ -1001,7 +1001,7 @@
                 t.preventDefault(), t.stopPropagation(), e._nlMoved || nlOpenPresetSwitcherPanel()
             })
         }
-        var r = nlCurrentPresetName(), a = null;
+        var settings = _getNaiSettings() || {}, customImage = settings.floatingBallImage || "", r = nlCurrentPresetName(), a = null;
         try {
             var i = await I.all();
             a = i.filter(function(e) {
@@ -1009,7 +1009,8 @@
             })[0] || null
         } catch (e) {}
         e.title = r ? "打开 NAI切换助手：" + r : "打开 NAI切换助手";
-        e.innerHTML = a && a.thumb ? '<img src="' + a.thumb + '" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;">' : '<div style="font-size:16px;color:#8a97a4;line-height:1;pointer-events:none;font-weight:700;">NAI</div>'
+        var ballImage = customImage || a && a.thumb || "";
+        e.innerHTML = ballImage ? '<img src="' + ballImage + '" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;">' : '<div style="font-size:16px;color:#8a97a4;line-height:1;pointer-events:none;font-weight:700;">NAI</div>'
     }
 
     function _getChatu8Settings() {
@@ -1458,7 +1459,7 @@
         }), n
     }
 
-    function applyPresetEntry(n) {
+    function applyPresetEntry(n, options) {
         if (!W()) return void E("未检测到智绘姬（st-chatu8）", "error");
         const e = (n.name || "").trim();
         if (!e) return void E("该收藏没有名称", "warning");
@@ -1495,7 +1496,8 @@
             return !1
         }(e);
         applyPresetVibeBinding(n), async function() {
-            t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info"), nlRefreshFloatingBall(), R(!1)
+            var silent = options && options.silent;
+            silent || (t ? E("已设为当前预设「" + e + "」", "success") : E("已写入预设，请在智绘姬面板确认", "info")), nlRefreshFloatingBall(), silent || R(!1)
         }()
     }
 
@@ -2015,7 +2017,8 @@
                         randomArtistPools: ns.randomArtistPools || [],
                         randomVibeEnabled: !!ns.randomVibeEnabled,
                         randomVibePoolId: ns.randomVibePoolId || "all",
-                        randomVibePools: ns.randomVibePools || []
+                        randomVibePools: ns.randomVibePools || [],
+                        floatingBallImage: ns.floatingBallImage || ""
                     }
                 })(),
                 import_notes: ["images.data_url 为离线导入图片内容", "image_id、prompt_id、collection_id 和 vibe_data_id 用于保持引用关系"]
@@ -2095,7 +2098,7 @@
         if (ns) {
             if (Array.isArray(settings.categories)) m(Array.from(new Set(f().concat(settings.categories))));
             if (settings.paramGroups && "object" == typeof settings.paramGroups) ns.paramGroups = Object.assign({}, ns.paramGroups || {}, settings.paramGroups);
-            ["randomArtistEnabled", "randomArtistPoolId", "randomArtistPools", "randomVibeEnabled", "randomVibePoolId", "randomVibePools"].forEach(function(key) { if (void 0 !== settings[key]) ns[key] = settings[key] });
+            ["randomArtistEnabled", "randomArtistPoolId", "randomArtistPools", "randomVibeEnabled", "randomVibePoolId", "randomVibePools", "floatingBallImage"].forEach(function(key) { if (void 0 !== settings[key]) ns[key] = settings[key] });
             Array.isArray(ns.randomArtistPools) && ns.randomArtistPools.forEach(function(pool){ pool.items = (pool.items || []).map(function(id){ return importedEntryIdMap[id] || id }) });
             _saveNaiSettings()
         }
@@ -2460,7 +2463,7 @@
         if (ns.randomArtistEnabled) {
             var entries = ns.entries && "object" == typeof ns.entries ? Object.values(ns.entries) : [], artistGroup = nlRandomPools("artist").filter(function(pool){ return pool.id === ns.randomArtistPoolId })[0], artistPool = artistGroup ? entries.filter(function(ent){ return artistGroup.items.indexOf(ent.id) >= 0 }) : entries;
             pickedArtist = nlPickDifferent(artistPool, ns.randomArtistLastId || "", function(ent){ return ent.id });
-            if (pickedArtist) { ns.randomArtistLastId = pickedArtist.id; applyPresetEntry(pickedArtist) }
+            if (pickedArtist) { ns.randomArtistLastId = pickedArtist.id; applyPresetEntry(pickedArtist, { silent: !0 }) }
         }
         if (ns.randomVibeEnabled) {
             var groups = re() || {}, names = Object.keys(groups).filter(function(name){ return groups[name] && Array.isArray(groups[name].vibes) && groups[name].vibes.length > 0 });
@@ -2493,8 +2496,9 @@
             currentParamGroups = nlGetParamGroups(),
             currentNaiParams = currentParamGroup && currentParamGroups[currentParamGroup] && currentParamGroups[currentParamGroup].params ? currentParamGroups[currentParamGroup].params : nlReadAllNaiParams(),
             currentParamKeys = Object.keys(currentParamGroups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }),
-            currentParamOptions = currentParamKeys.map(function(g){ return '<option value="'+k(g)+'"'+(g===currentParamGroup?' selected':'')+'>'+k(g)+'</option>'; }).join("");
-        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;${t?"display:none;":""}"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">圆形显示当前预设预览图</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><select class="nl-input" id="nl-set-param-group" style="flex:1 1 auto;min-width:0;margin:0;">${currentParamOptions || '<option value="">（暂无参数组）</option>'}</select><button class="nl-btn ghost nl-set-param-btn" data-pa="new" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-set-param-btn" data-pa="rename" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-set-param-btn" data-pa="del" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">删组</button></div><div id="nl-set-param-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
+            currentParamOptions = currentParamKeys.map(function(g){ return '<option value="'+k(g)+'"'+(g===currentParamGroup?' selected':'')+'>'+k(g)+'</option>'; }).join(""),
+            floatingImage = (_getNaiSettings() || {}).floatingBallImage || "";
+        e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">可显示当前预设预览图或自定义图片</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div><div style="display:flex;align-items:center;gap:8px;margin-top:9px;"><div id="nl-floating-preview" style="width:36px;height:36px;flex:none;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(120,140,160,.12);font-size:10px;color:#8a97a4;">${floatingImage?`<img src="${k(floatingImage)}" style="width:100%;height:100%;object-fit:cover;">`:'当前'}</div><button class="nl-btn ghost" id="nl-floating-image-pick" style="font-size:12px!important;padding:6px 9px!important;min-height:30px!important;">选择图片</button><button class="nl-btn ghost" id="nl-floating-image-reset" style="font-size:12px!important;padding:6px 9px!important;min-height:30px!important;"${floatingImage?'':' disabled'}>恢复当前预设</button><input type="file" id="nl-floating-image-file" accept="image/*" style="display:none;"></div></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><select class="nl-input" id="nl-set-param-group" style="flex:1 1 auto;min-width:0;margin:0;">${currentParamOptions || '<option value="">（暂无参数组）</option>'}</select><button class="nl-btn ghost nl-set-param-btn" data-pa="new" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-set-param-btn" data-pa="rename" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-set-param-btn" data-pa="del" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">删组</button></div><div id="nl-set-param-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
         if (!t) {
             var floatingSettings = e.querySelector("#nl-floating-settings"), resultBox = e.querySelector("#nl-result");
             floatingSettings && floatingSettings.insertAdjacentHTML("afterend", '<div class="nl-field" id="nl-random-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);"></div>');
@@ -2660,6 +2664,21 @@
         var ft = e.querySelector("#nl-floating-toggle");
         ft && ft.addEventListener("change", function() {
             nlSetFloatingEnabled(ft.checked)
+        });
+        var floatingPick = e.querySelector("#nl-floating-image-pick"), floatingFile = e.querySelector("#nl-floating-image-file"), floatingReset = e.querySelector("#nl-floating-image-reset");
+        floatingPick && floatingFile && (floatingPick.addEventListener("click", function(){ floatingFile.click() }), floatingFile.addEventListener("change", async function(){
+            var file = floatingFile.files && floatingFile.files[0];
+            if (!file) return;
+            var image = await C(file);
+            if (!image) return void E("悬浮球图片读取失败", "error");
+            var ns = _getNaiSettings();
+            ns && (ns.floatingBallImage = image, _saveNaiSettings());
+            nlRefreshFloatingBall(), E("悬浮球图片已更新", "success"), B()
+        }));
+        floatingReset && floatingReset.addEventListener("click", function(){
+            var ns = _getNaiSettings();
+            ns && (ns.floatingBallImage = "", _saveNaiSettings());
+            nlRefreshFloatingBall(), E("已恢复显示当前预设图片", "success"), B()
         });
         const v = e.querySelector("#nl-parse-close");
         v && v.addEventListener("click", () => {
