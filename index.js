@@ -2005,6 +2005,20 @@
                 }),
                 generated_placeholder_ids: standalone,
                 missing_vibe_ids: Object.keys(missingVibeIds),
+                switcher_entries: entries,
+                switcher_settings: (function() {
+                    var ns = _getNaiSettings() || {};
+                    return {
+                        categories: f(),
+                        paramGroups: ns.paramGroups || {},
+                        randomArtistEnabled: !!ns.randomArtistEnabled,
+                        randomArtistMode: ns.randomArtistMode || "all",
+                        randomArtistIds: ns.randomArtistIds || [],
+                        randomVibeEnabled: !!ns.randomVibeEnabled,
+                        randomVibeMode: ns.randomVibeMode || "all",
+                        randomVibeGroups: ns.randomVibeGroups || []
+                    }
+                })(),
                 import_notes: ["images.data_url 为离线导入图片内容", "image_id、prompt_id、collection_id 和 vibe_data_id 用于保持引用关系"]
             };
         var baseName = "nai-gallery-local-import-" + Date.now(),
@@ -2015,6 +2029,77 @@
             saveText = "shared" === saveMode ? "已打开系统保存/分享面板" : "saved" === saveMode ? "文件已保存" : "已请求浏览器下载";
         E(saveText + "：" + filename + "；解压后包含 1 个 JSON 文件；包含 " + gallery.length + " 个收藏、" + Object.keys(vibeMap).length + " 个 Vibe" + (Object.keys(missingVibeIds).length ? "；有 " + Object.keys(missingVibeIds).length + " 个 Vibe 数据缺失" : ""), Object.keys(missingVibeIds).length ? "warning" : "success", 5000);
         return { filename: filename, count: gallery.length, vibeCount: Object.keys(vibeMap).length, saveMode: saveMode }
+    }
+
+    async function nlReadGalleryImportFile(file) {
+        var bytes = new Uint8Array(await file.arrayBuffer()), text = "";
+        if (/\.json$/i.test(file.name || "") || 123 === bytes[0]) text = new TextDecoder("utf-8").decode(bytes);
+        else {
+            if (!(80 === bytes[0] && 75 === bytes[1] && 3 === bytes[2] && 4 === bytes[3])) throw new Error("请选择本插件导出的 ZIP 或 JSON 文件");
+            var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), method = view.getUint16(8, !0), packedSize = view.getUint32(18, !0), nameLength = view.getUint16(26, !0), extraLength = view.getUint16(28, !0), start = 30 + nameLength + extraLength, packed = bytes.slice(start, start + packedSize), raw = packed;
+            if (8 === method) {
+                if (!("DecompressionStream" in window)) throw new Error("当前浏览器不支持解压，请先解压 ZIP 后选择其中的 JSON");
+                raw = new Uint8Array(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer())
+            } else if (0 !== method) throw new Error("不支持此 ZIP 压缩方式，请选择本插件直接导出的文件");
+            text = new TextDecoder("utf-8").decode(raw)
+        }
+        var pkg = JSON.parse(text);
+        if (!pkg || "nai-preset-switcher-gallery-export" !== pkg.format) throw new Error("文件不是 NAI切换助手导出包");
+        return pkg
+    }
+
+    async function nlImportGalleryPackage(file) {
+        var pkg = await nlReadGalleryImportFile(file), oldEntries = await I.all(), byName = {}, byId = {};
+        oldEntries.forEach(function(ent) { byName[(ent.name || "").trim()] = ent; byId[ent.id] = ent });
+        var sourceEntries = Array.isArray(pkg.switcher_entries) && pkg.switcher_entries.length ? pkg.switcher_entries : (pkg.gallery || []).map(function(item) {
+            return {
+                id: item.collection_id || item.id || S(), name: item.title || "未命名",
+                category: Array.isArray(item.category) && item.category.length ? item.category : ["本地导入"],
+                positive: item.positive_prompt || "", negative: item.negative_prompt || "",
+                naiParams: item.params || {}, thumb: item.image_generated ? "" : item.image_data_url || item.image || "",
+                vibeEnabled: !!item.vibe_group, vibeGroup: item.vibe_group || "", source: "迁移导入", createdAt: Date.now()
+            }
+        }), conflicts = sourceEntries.filter(function(ent) { return !!byName[(ent.name || "").trim()] }).length,
+            vibeCount = Array.isArray(pkg.vibes) ? pkg.vibes.length : 0,
+            groupCount = Array.isArray(pkg.vibe_groups) ? pkg.vibe_groups.length : 0,
+            currentSt = W() || {}, vibeConflicts = (pkg.vibes || []).filter(function(vibe){ return vibe && currentSt.vibePresets && currentSt.vibePresets[vibe.name] }).length,
+            groupConflicts = (pkg.vibe_groups || []).filter(function(group){ return group && currentSt.vibeGroups && currentSt.vibeGroups[group.name] }).length;
+        if (!confirm("将导入 " + sourceEntries.length + " 个画师串、" + vibeCount + " 个 Vibe、" + groupCount + " 个 Vibe 组。" + (conflicts || vibeConflicts || groupConflicts ? "\n同名内容将覆盖：画师串 " + conflicts + "、Vibe " + vibeConflicts + "、Vibe 组 " + groupConflicts + "。" : "") + "\n是否继续？")) return null;
+        var st = W();
+        if (!st && (vibeCount || groupCount)) throw new Error("未检测到智绘姬，无法恢复 Vibe 数据");
+        if (st) {
+            st.vibePresets || (st.vibePresets = {}), st.vibeGroups || (st.vibeGroups = {});
+            for (var vibe of pkg.vibes || []) {
+                if (!vibe || !vibe.id) continue;
+                if (vibe.data) await A(vibe.id, vibe.data, !1, vibe.type || "text");
+                var vibeName = vibe.name || "导入 Vibe " + vibe.id.slice(0, 8);
+                st.vibePresets[vibeName] = { vibeDataId: vibe.id, model: vibe.model || "", strength: "number" == typeof vibe.strength ? vibe.strength : .6, thumbnail: vibe.thumbnail || "", imageId: vibe.image_id || null }
+            }
+            (pkg.vibe_groups || []).forEach(function(group) {
+                if (!group || !group.name) return;
+                st.vibeGroups[group.name] = { vibes: (group.vibes || []).map(function(slot) { return { vibeDataId: slot.vibe_data_id || slot.vibeDataId || "", strength: "number" == typeof slot.strength ? slot.strength : .6 } }).filter(function(slot) { return !!slot.vibeDataId }), coverImageId: null, createdAt: Date.now(), updatedAt: Date.now() }
+            });
+            X()
+        }
+        for (var ent of sourceEntries) {
+            if (!ent || !(ent.name || "").trim()) continue;
+            var existing = byName[(ent.name || "").trim()], restored = Object.assign({}, ent);
+            restored.id = existing ? existing.id : restored.id && !byId[restored.id] ? restored.id : S();
+            restored.source = restored.source || "迁移导入";
+            restored.createdAt = restored.createdAt || Date.now();
+            await I.put(restored);
+            st && Y(restored.name, restored.positive || "", restored.negative || "")
+        }
+        var settings = pkg.switcher_settings || {}, ns = _getNaiSettings();
+        if (ns) {
+            if (Array.isArray(settings.categories)) m(Array.from(new Set(f().concat(settings.categories))));
+            if (settings.paramGroups && "object" == typeof settings.paramGroups) ns.paramGroups = Object.assign({}, ns.paramGroups || {}, settings.paramGroups);
+            ["randomArtistEnabled", "randomArtistMode", "randomArtistIds", "randomVibeEnabled", "randomVibeMode", "randomVibeGroups"].forEach(function(key) { if (void 0 !== settings[key]) ns[key] = settings[key] });
+            _saveNaiSettings()
+        }
+        await _repairMissingVibeThumbnails();
+        E("导入完成：" + sourceEntries.length + " 个画师串、" + vibeCount + " 个 Vibe、" + groupCount + " 个 Vibe 组", "success", 5000);
+        return { entries: sourceEntries.length, vibes: vibeCount, groups: groupCount }
     }
     async function z(e) {
         const t = await q();
@@ -2315,6 +2400,55 @@
         }), "parse" === e ? B() : "vibe" === e ? le() : R()
     }
 
+    async function nlRenderRandomSettings(container) {
+        if (!container) return;
+        var ns = _getNaiSettings() || {}, entries = await I.all(), groups = re() || {}, artistMode = ns.randomArtistMode || "all", vibeMode = ns.randomVibeMode || "all", artistIds = new Set(Array.isArray(ns.randomArtistIds) ? ns.randomArtistIds : []), vibeNames = new Set(Array.isArray(ns.randomVibeGroups) ? ns.randomVibeGroups : []);
+        container.innerHTML = '<div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">随机功能</div><div style="font-size:12px;color:#566472;margin-bottom:5px;">随机画师串</div><div style="display:flex;gap:6px;align-items:center;"><select class="nl-input" id="nl-random-artist-mode" style="flex:1;margin:0;"><option value="all"'+("all"===artistMode?" selected":"")+'>全部画师串</option><option value="selected"'+("selected"===artistMode?" selected":"")+'>仅自选画师串</option></select><button class="nl-btn" id="nl-random-artist-run" style="font-size:12px!important;padding:6px 9px!important;">随机应用</button></div><details style="margin:7px 0 12px;"><summary style="cursor:pointer;font-size:12px;color:#7a8794;">选择画师串（已选 '+artistIds.size+'）</summary><div style="max-height:160px;overflow:auto;margin-top:6px;display:grid;gap:4px;">'+(entries.length?entries.map(function(ent){return '<label style="font-size:12px;display:flex;gap:6px;align-items:center;"><input type="checkbox" data-random-artist="'+k(ent.id)+'"'+(artistIds.has(ent.id)?" checked":"")+'> '+k(ent.name||"未命名")+'</label>'}).join(""):'<span style="font-size:12px;color:#8a97a4;">暂无画师串</span>')+'</div></details><div style="font-size:12px;color:#566472;margin-bottom:5px;">随机 Vibe 组</div><div style="display:flex;gap:6px;align-items:center;"><select class="nl-input" id="nl-random-vibe-mode" style="flex:1;margin:0;"><option value="all"'+("all"===vibeMode?" selected":"")+'>全部 Vibe 组</option><option value="selected"'+("selected"===vibeMode?" selected":"")+'>仅自选 Vibe 组</option></select><button class="nl-btn" id="nl-random-vibe-run" style="font-size:12px!important;padding:6px 9px!important;">随机应用</button></div><details style="margin-top:7px;"><summary style="cursor:pointer;font-size:12px;color:#7a8794;">选择 Vibe 组（已选 '+vibeNames.size+'）</summary><div style="max-height:160px;overflow:auto;margin-top:6px;display:grid;gap:4px;">'+(Object.keys(groups).length?Object.keys(groups).map(function(name){return '<label style="font-size:12px;display:flex;gap:6px;align-items:center;"><input type="checkbox" data-random-vibe="'+k(name)+'"'+(vibeNames.has(name)?" checked":"")+'> '+k(name)+'</label>'}).join(""):'<span style="font-size:12px;color:#8a97a4;">暂无 Vibe 组</span>')+'</div></details>';
+        container.insertAdjacentHTML("afterbegin", '<label style="font-size:12px;display:flex;align-items:center;gap:6px;margin-bottom:8px;"><input type="checkbox" id="nl-random-artist-enabled"'+(ns.randomArtistEnabled?" checked":"")+'> 每次生图自动随机画师串</label>');
+        var vibeTitle = Array.from(container.querySelectorAll("div")).filter(function(el){ return "随机 Vibe 组" === el.textContent })[0];
+        vibeTitle && vibeTitle.insertAdjacentHTML("beforebegin", '<label style="font-size:12px;display:flex;align-items:center;gap:6px;margin:4px 0 8px;"><input type="checkbox" id="nl-random-vibe-enabled"'+(ns.randomVibeEnabled?" checked":"")+'> 每次生图自动随机 Vibe 组</label>');
+        function saveChoice() { ns.randomArtistEnabled = !!container.querySelector("#nl-random-artist-enabled").checked; ns.randomVibeEnabled = !!container.querySelector("#nl-random-vibe-enabled").checked; ns.randomArtistMode = container.querySelector("#nl-random-artist-mode").value; ns.randomVibeMode = container.querySelector("#nl-random-vibe-mode").value; ns.randomArtistIds = Array.from(container.querySelectorAll("[data-random-artist]:checked")).map(function(el){return el.getAttribute("data-random-artist")}); ns.randomVibeGroups = Array.from(container.querySelectorAll("[data-random-vibe]:checked")).map(function(el){return el.getAttribute("data-random-vibe")}); var st = W(); st && (st.randomYushe = "false", st.randomVibeGroup = "false", X()); _saveNaiSettings() }
+        container.onchange = saveChoice;
+        container.querySelector("#nl-random-artist-run").addEventListener("click", function() { saveChoice(); var pool = "selected" === ns.randomArtistMode ? entries.filter(function(ent){return ns.randomArtistIds.indexOf(ent.id)>=0}) : entries.slice(); if (!pool.length) return void E("当前随机范围没有可用画师串", "warning"); var picked = pool[Math.floor(Math.random()*pool.length)]; applyPresetEntry(picked); E("已随机应用画师串「"+(picked.name||"未命名")+"」", "success") });
+        container.querySelector("#nl-random-vibe-run").addEventListener("click", function() { saveChoice(); var names = Object.keys(groups), pool = "selected" === ns.randomVibeMode ? names.filter(function(name){return ns.randomVibeGroups.indexOf(name)>=0}) : names; if (!pool.length) return void E("当前随机范围没有可用 Vibe 组", "warning"); var picked = pool[Math.floor(Math.random()*pool.length)]; oeSyncEnabled(!0); oeSetCurrentGroup(picked, !0); E("已随机应用 Vibe 组「"+picked+"」", "success") })
+    }
+
+    function nlPickDifferent(pool, lastValue, valueOf) {
+        if (!pool.length) return null;
+        var choices = pool.length > 1 ? pool.filter(function(item){ return valueOf(item) !== lastValue }) : pool;
+        return choices[Math.floor(Math.random() * choices.length)]
+    }
+
+    function nlRandomizeForGeneration() {
+        var ns = _getNaiSettings() || {}, st = W(), pickedArtist = null, pickedVibe = "";
+        if (!st) return;
+        st.randomYushe = "false", st.randomVibeGroup = "false";
+        if (ns.randomArtistEnabled) {
+            var entries = ns.entries && "object" == typeof ns.entries ? Object.values(ns.entries) : [], artistPool = "selected" === ns.randomArtistMode ? entries.filter(function(ent){ return (ns.randomArtistIds || []).indexOf(ent.id) >= 0 }) : entries;
+            pickedArtist = nlPickDifferent(artistPool, ns.randomArtistLastId || "", function(ent){ return ent.id });
+            if (pickedArtist) { ns.randomArtistLastId = pickedArtist.id; applyPresetEntry(pickedArtist) }
+        }
+        if (ns.randomVibeEnabled) {
+            var groups = re() || {}, names = Object.keys(groups).filter(function(name){ return groups[name] && Array.isArray(groups[name].vibes) && groups[name].vibes.length > 0 });
+            "selected" === ns.randomVibeMode && (names = names.filter(function(name){ return (ns.randomVibeGroups || []).indexOf(name) >= 0 }));
+            pickedVibe = nlPickDifferent(names, ns.randomVibeLastGroup || "", function(name){ return name }) || "";
+            if (pickedVibe) { ns.randomVibeLastGroup = pickedVibe; oeSyncEnabled(!0); oeSetCurrentGroup(pickedVibe, !0) }
+        }
+        (pickedArtist || pickedVibe) && _saveNaiSettings()
+    }
+
+    function nlInstallPerGenerationRandomizer() {
+        var ctx = F(), eventSource = ctx && ctx.eventSource;
+        if (!eventSource || "function" != typeof eventSource.emit || eventSource.__naiSwitcherRandomWrapped) return !1;
+        var originalEmit = eventSource.emit;
+        eventSource.emit = function(eventName) {
+            if ("generate-image-request" === eventName) try { nlRandomizeForGeneration() } catch (err) { console.log("[NAI] 生图前随机失败", err) }
+            return originalEmit.apply(this, arguments)
+        };
+        eventSource.__naiSwitcherRandomWrapped = !0;
+        return !0
+    }
+
     function B() {
         const e = s.getElementById(r).querySelector('.nl-body[data-view="parse"]'),
             t = c;
@@ -2326,6 +2460,20 @@
             currentParamKeys = Object.keys(currentParamGroups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }),
             currentParamOptions = currentParamKeys.map(function(g){ return '<option value="'+k(g)+'"'+(g===currentParamGroup?' selected':'')+'>'+k(g)+'</option>'; }).join("");
         e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);display:flex;align-items:center;justify-content:space-between;gap:12px;${t?"display:none;":""}"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">圆形显示当前预设预览图</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><select class="nl-input" id="nl-set-param-group" style="flex:1 1 auto;min-width:0;margin:0;">${currentParamOptions || '<option value="">（暂无参数组）</option>'}</select><button class="nl-btn ghost nl-set-param-btn" data-pa="new" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-set-param-btn" data-pa="rename" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-set-param-btn" data-pa="del" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">删组</button></div><div id="nl-set-param-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
+        if (!t) {
+            var floatingSettings = e.querySelector("#nl-floating-settings");
+            floatingSettings && floatingSettings.insertAdjacentHTML("beforebegin", '<div class="nl-drop" id="nl-package-import" style="margin-top:10px;">导入迁移包（ZIP / JSON）</div><input type="file" id="nl-package-file" accept=".zip,.json,application/zip,application/json" style="display:none;"><div class="nl-field" id="nl-random-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);"></div>');
+            var packageImport = e.querySelector("#nl-package-import"), packageFile = e.querySelector("#nl-package-file");
+            packageImport && packageFile && (packageImport.addEventListener("click", function(){ packageFile.click() }), packageFile.addEventListener("change", async function(ev) {
+                var file = ev.target.files && ev.target.files[0];
+                if (!file) return;
+                packageImport.textContent = "正在导入...";
+                try { var result = await nlImportGalleryPackage(file); result && (await nlRenderRandomSettings(e.querySelector("#nl-random-settings")), R(!1)) }
+                catch (err) { E("导入失败：" + (err && err.message || err), "error", 5000) }
+                finally { packageImport.textContent = "导入迁移包（ZIP / JSON）"; packageFile.value = "" }
+            }));
+            nlRenderRandomSettings(e.querySelector("#nl-random-settings")).catch(function(err){ console.log("[NAI] 随机设置加载失败", err) })
+        }
         const n = e.querySelector("#nl-parse-tags");
 
         function a() {
@@ -4041,6 +4189,7 @@ function bindFields(){
         } catch (e) {}
     }
     setInterval(ce, 2e3), setTimeout(ce, 500), setTimeout(nlRefreshFloatingBall, 800), setTimeout(nlRefreshFloatingBall, 2200);
+    setInterval(nlInstallPerGenerationRandomizer, 2e3), setTimeout(nlInstallPerGenerationRandomizer, 600);
     /* 启动时执行旧数据迁移 */
     setTimeout(function() { _migrateOldData().catch(function(e) { console.log("[NAI] 迁移旧数据失败:", e); }); }, 1000);
     /* 首次无参数组时自动建「默认」组 */
