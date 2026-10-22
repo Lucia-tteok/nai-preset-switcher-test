@@ -3712,20 +3712,20 @@ EX && EX.remove();
             var pg = i.querySelector("#nl-dparam-group"),
                 pf = i.querySelector("#nl-dparam-fields");
             if (!pg || !pf) return;
-            function curGroup(){ return n.naiParamGroup || NL_DEFAULT_PARAM_GROUP; }
+            function curGroup(){ return n.naiParamsSelected ? "__preset__" : n.naiParamGroup || NL_DEFAULT_PARAM_GROUP; }
             function sortedKeys(groups){ return Object.keys(groups).sort(function(a,b){ return a===NL_DEFAULT_PARAM_GROUP?-1:b===NL_DEFAULT_PARAM_GROUP?1:a.localeCompare(b,"zh-CN"); }); }
             function fillGroupSel(){
                 nlEnsureDefaultParamGroup();
                 nlBindChatuNaiParamReverseSync();
-                var groups = nlGetParamGroups(), keys = sortedKeys(groups), cg = curGroup();
-                if (cg && !groups[cg]) cg = "";
+                var groups = nlGetParamGroups(), keys = sortedKeys(groups), cg = curGroup(), ownOption = n.naiParamsSelected ? '<option value="__preset__">图片解析参数</option>' : '';
+                if ("__preset__" !== cg && cg && !groups[cg]) cg = "";
                 if (!cg) cg = groups[NL_DEFAULT_PARAM_GROUP] ? NL_DEFAULT_PARAM_GROUP : keys[0];
-                n.naiParamGroup = cg || "";
-                pg.innerHTML = keys.length ? keys.map(function(e){ return '<option value="'+k(e)+'"'+(e===cg?' selected':'')+'>'+k(e)+'</option>'; }).join("") : '<option value="">（暂无参数组）</option>';
+                "__preset__" !== cg && (n.naiParamGroup = cg || "");
+                pg.innerHTML = ownOption + (keys.length ? keys.map(function(e){ return '<option value="'+k(e)+'"'+(e===cg?' selected':'')+'>'+k(e)+'</option>'; }).join("") : ownOption ? '' : '<option value="">（暂无参数组）</option>');
                 pg.value = cg || "";
             }
             function fillFields(){
-                var groups = nlGetParamGroups(), cg = curGroup(), g = groups[cg], params = g && g.params || {};
+                var groups = nlGetParamGroups(), cg = curGroup(), g = groups[cg], params = "__preset__" === cg ? n.naiParams || {} : g && g.params || {};
                 pf.innerHTML = nlRenderParamFieldInputs("nl-dparam-pf-", params);
                 bindFields();
                 nlSyncExportButtonSize(pf, "nl-dparam-pf-");
@@ -3735,11 +3735,8 @@ EX && EX.remove();
                 if (!sg) return;
                 ev && ev.target && ev.target.getAttribute("data-pf") === "novelai_size" && nlSyncParamSizeInputs(pf, "nl-dparam-pf-");
                 var params = nlReadParamFieldInputs(pf, "nl-dparam-pf-");
-                nlSaveParamGroup(sg, params);
-                n.naiParamGroup = sg;
-                n.naiParams = params;
-                await I.put(n);
-                nlApplyParamGroup(sg);
+                if ("__preset__" === sg) n.naiParamsSelected = !0, n.naiParamGroup = "", n.naiParams = params, await I.put(n), nlWriteAllNaiParams(params);
+                else nlSaveParamGroup(sg, params), n.naiParamsSelected = !1, n.naiParamGroup = sg, n.naiParams = params, await I.put(n), nlApplyParamGroup(sg);
             }
 function bindFields(){
                     pf.querySelectorAll("[data-pf]").forEach(function(el){
@@ -3757,11 +3754,12 @@ function bindFields(){
                 }
             fillGroupSel(); fillFields();
             pg.addEventListener("change", async function(){
-                n.naiParamGroup = pg.value;
-                n.naiParams = (nlGetParamGroups()[pg.value] || {}).params || {};
+                n.naiParamsSelected = "__preset__" === pg.value;
+                n.naiParamGroup = n.naiParamsSelected ? "" : pg.value;
+                n.naiParamsSelected || (n.naiParams = (nlGetParamGroups()[pg.value] || {}).params || {});
                 await I.put(n);
                 fillFields();
-                nlApplyParamGroup(pg.value);
+                n.naiParamsSelected ? nlWriteAllNaiParams(n.naiParams || {}) : nlApplyParamGroup(pg.value);
             });
         })();
         const $ = i.querySelector("#nl-dthumbimg"),
