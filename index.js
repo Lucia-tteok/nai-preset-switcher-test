@@ -690,6 +690,7 @@
     }
 
     function nlApplyPresetParams(n) {
+        if (n && n.naiParamsSelected) return nlWriteAllNaiParams(n.naiParams || {});
         var groupName = n && n.naiParamGroup ? n.naiParamGroup : NL_DEFAULT_PARAM_GROUP;
         return groupName && nlGetParamGroups()[groupName] ? nlApplyParamGroup(groupName) : nlApplyChatuNaiParams(n)
     }
@@ -2152,12 +2153,43 @@
         return null
     }
 
+    function nlParsedImageParams(e) {
+        var out = {}, put = function(id, value) { null !== value && void 0 !== value && "" !== value && (out[id] = value) };
+        put("novelaimode", e.model);
+        put("novelai_sampler", e.sampler);
+        put("Schedule", e.noise_schedule || e.scheduler);
+        put("novelai_width", e.width);
+        put("novelai_height", e.height);
+        e.width && e.height && put("novelai_size", e.width + "x" + e.height);
+        put("novelai_steps", e.steps);
+        put("novelai_seed", e.seed);
+        put("nai3Scale", null != e.scale ? e.scale : e.cfg_scale);
+        put("cfg_rescale", e.cfg_rescale);
+        null != e.sm && put("sm", !!e.sm);
+        null != (e.sm_dyn ?? e.dyn) && put("dyn", !!(e.sm_dyn ?? e.dyn));
+        null != (e.skip_cfg_above_sigma ?? e.variety_boost) && put("nai3Variety", !!(e.skip_cfg_above_sigma ?? e.variety_boost));
+        null != (e.dynamic_thresholding ?? e.decrisper) && put("nai3Deceisp", !!(e.dynamic_thresholding ?? e.decrisper));
+        return out
+    }
+
+    function nlParsedImageVibes(e) {
+        var cached = Array.isArray(e.reference_image_multiple_cached) ? e.reference_image_multiple_cached : [], raw = Array.isArray(e.reference_image_multiple) ? e.reference_image_multiple : [], strengths = Array.isArray(e.reference_strength_multiple) ? e.reference_strength_multiple : [], infos = Array.isArray(e.reference_information_extracted_multiple) ? e.reference_information_extracted_multiple : [];
+        return (cached.length ? cached : raw).map(function(item, index) {
+            var data = "string" == typeof item ? item : item && (item.data || item.encoding || item.image) || "";
+            return { data: data, rawImage: !cached.length, strength: "number" == typeof strengths[index] ? strengths[index] : .6, information: "number" == typeof infos[index] ? infos[index] : item && item.params && "number" == typeof item.params.information_extracted ? item.params.information_extracted : 1 }
+        }).filter(function(item) { return !!item.data })
+    }
+
     function G(e) {
-        let t = e.prompt || "",
-            n = e.uc || "";
-        return e.v4_prompt && e.v4_prompt.caption && e.v4_prompt.caption.base_caption && (t = e.v4_prompt.caption.base_caption || t), e.v4_negative_prompt && e.v4_negative_prompt.caption && e.v4_negative_prompt.caption.base_caption && (n = e.v4_negative_prompt.caption.base_caption || n), {
+        var meta = e.parameters && "object" == typeof e.parameters ? Object.assign({}, e, e.parameters) : e;
+        let t = meta.prompt || "",
+            n = meta.uc || meta.negative_prompt || "";
+        return meta.v4_prompt && meta.v4_prompt.caption && meta.v4_prompt.caption.base_caption && (t = meta.v4_prompt.caption.base_caption || t), meta.v4_negative_prompt && meta.v4_negative_prompt.caption && meta.v4_negative_prompt.caption.base_caption && (n = meta.v4_negative_prompt.caption.base_caption || n), {
             positive: t,
-            negative: n
+            negative: n,
+            metadata: meta,
+            parsedParams: nlParsedImageParams(meta),
+            parsedVibes: nlParsedImageVibes(meta)
         }
     }
     async function C(e) {
@@ -2211,11 +2243,7 @@
                         e && e.key && (t[e.key] = e.value)
                     } if (t.Comment) try {
                     const e = G(JSON.parse(t.Comment));
-                    if (e.positive || e.negative) return {
-                        positive: e.positive,
-                        negative: e.negative,
-                        source: "NovelAI"
-                    }
+                    if (e.positive || e.negative) return Object.assign({}, e, { source: "NovelAI" })
                 } catch (e) {}
                 if (t.parameters) {
                     const e = t.parameters,
@@ -2301,19 +2329,11 @@
                         const A = JSON.parse($);
                         if (A.Comment) try {
                             const D = G(JSON.parse(A.Comment));
-                            return {
-                                positive: D.positive,
-                                negative: D.negative,
-                                source: "NovelAI (隐写)"
-                            }
+                            return Object.assign({}, D, { source: "NovelAI (隐写)" })
                         } catch (z) {}
                         if (A.prompt) {
                             const P = G(A);
-                            return {
-                                positive: P.positive,
-                                negative: P.negative,
-                                source: "NovelAI (隐写)"
-                            }
+                            return Object.assign({}, P, { source: "NovelAI (隐写)" })
                         }
                         if (A.Description) return {
                             positive: A.Description,
@@ -2343,6 +2363,50 @@
             source: "未识别",
             thumb: r
         }
+    }
+
+    function nlParsedOptionHtml(parsed) {
+        if (!parsed) return "";
+        var params = parsed.parsedParams || {}, vibes = parsed.parsedVibes || [], keys = Object.keys(params), hasSize = "novelai_width" in params || "novelai_height" in params || "novelai_size" in params;
+        hasSize && (keys = keys.filter(function(key){ return ["novelai_width","novelai_height","novelai_size"].indexOf(key)<0 }), keys.push("__size__"));
+        if (!keys.length && !vibes.length) return "";
+        Array.isArray(parsed.selectedParamKeys) || (parsed.selectedParamKeys = keys.slice());
+        Array.isArray(parsed.selectedVibeIndexes) || (parsed.selectedVibeIndexes = vibes.map(function(_, i){ return i }));
+        var paramHtml = keys.map(function(key) {
+            var field = NAI_PARAM_FIELDS.filter(function(f){ return f.id === key })[0], label = "__size__" === key ? "图像尺寸" : field && field.label || key, value = "__size__" === key ? (params.novelai_width && params.novelai_height ? params.novelai_width+"x"+params.novelai_height : params.novelai_size) : params[key];
+            "boolean" == typeof value && (value = value ? "开启" : "关闭");
+            return '<label style="display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid rgba(120,140,160,.24);border-radius:9px;font-size:12px;cursor:pointer;"><input type="checkbox" class="nl-parsed-param" data-param="'+k(key)+'"'+(parsed.selectedParamKeys.indexOf(key)>=0?' checked':'')+'> '+k(label)+'：'+k(value)+'</label>'
+        }).join("");
+        var vibeHtml = vibes.map(function(vibe, i) {
+            return '<label style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid rgba(120,140,160,.2);border-radius:9px;font-size:12px;cursor:pointer;"><input type="checkbox" class="nl-parsed-vibe" data-vibe-index="'+i+'"'+(parsed.selectedVibeIndexes.indexOf(i)>=0?' checked':'')+'><span style="flex:1;">Vibe '+(i+1)+'</span><span style="color:#8a97a4;">强度 '+Math.round(vibe.strength*100)+'%，信息提取 '+Math.round(vibe.information*100)+'%</span></label>'
+        }).join("");
+        return '<div class="nl-field" id="nl-parsed-options" style="border:1px solid rgba(120,140,160,.25);border-radius:11px;padding:10px;background:rgba(255,255,255,.4);">'+(vibes.length?'<div style="font-size:13px;font-weight:600;color:#566472;margin-bottom:7px;">参考图 · Vibe Transfer（'+vibes.length+' 个）</div><div style="display:grid;gap:6px;">'+vibeHtml+'</div><input class="nl-input" id="nl-parsed-vibe-group" value="'+k(parsed.vibeGroupName||'')+'" placeholder="Vibe 组名称（留空则使用预设名）" style="margin-top:8px;">':'')+(keys.length?'<div style="font-size:13px;font-weight:600;color:#566472;margin:10px 0 7px;">生成参数</div><div style="display:flex;flex-wrap:wrap;gap:6px;">'+paramHtml+'</div>':'')+'</div>'
+    }
+
+    function nlParsedModelKey(model) {
+        model = String(model || "");
+        return model.indexOf("4-5-curated") >= 0 ? "v4-5curated" : model.indexOf("4-5-full") >= 0 ? "v4-5full" : model.indexOf("4-curated") >= 0 ? "v4curated" : model.indexOf("4-full") >= 0 ? "v4full" : model.indexOf("diffusion-3") >= 0 ? "v3" : "v4-5curated"
+    }
+
+    async function nlSaveParsedVibes(parsed, indexes, groupName) {
+        var st = W(), vibes = parsed && parsed.parsedVibes || [];
+        if (!st || !indexes.length) return "";
+        st.vibePresets || (st.vibePresets = {}), st.vibeGroups || (st.vibeGroups = {});
+        var model = parsed.metadata && parsed.metadata.model || "", modelKey = nlParsedModelKey(model), slots = [];
+        for (var index of indexes) {
+            var vibe = vibes[index];
+            if (!vibe || !vibe.data) continue;
+            var id = S(), name = groupName + " · Vibe " + (index + 1), encodingKey = S(), data = { version: 1, encodings: {} };
+            data.encodings[modelKey] = {};
+            data.encodings[modelKey][encodingKey] = { encoding: vibe.data, params: { information_extracted: vibe.information } };
+            await A(id, JSON.stringify(data), !1, "text");
+            st.vibePresets[name] = { vibeDataId: id, model: model, strength: vibe.strength, thumbnail: "", imageId: null };
+            slots.push({ vibeDataId: id, strength: vibe.strength })
+        }
+        if (!slots.length) return "";
+        st.vibeGroups[groupName] = { vibes: slots, coverImageId: null, createdAt: Date.now(), updatedAt: Date.now() };
+        X();
+        return groupName
     }
 
     function N() {
@@ -2499,6 +2563,14 @@
             currentParamOptions = currentParamKeys.map(function(g){ return '<option value="'+k(g)+'"'+(g===currentParamGroup?' selected':'')+'>'+k(g)+'</option>'; }).join(""),
             floatingImage = (_getNaiSettings() || {}).floatingBallImage || "";
         e.innerHTML = `\n<div class="nl-drop" id="nl-drop" style="${t?"display:none;":""}">点击或拖入 NovelAI / SD 图片解析提示词</div>\n<input type="file" id="nl-file" accept="image/*" style="display:none;">\n<div class="nl-drop" id="nl-directimport" style="margin-top:10px;${t?"display:none;":""}">直接导入（手动填写）</div>\n<div class="nl-field" id="nl-floating-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:13px;color:#566472;font-weight:600;">悬浮球</div><div style="font-size:12px;color:#8a97a4;margin-top:3px;">可显示当前预设预览图或自定义图片</div></div><label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#566472;white-space:nowrap;"><input type="checkbox" id="nl-floating-toggle"${nlGetFloatingEnabled()?" checked":""}> 开启悬浮球</label></div><div style="display:flex;align-items:center;gap:8px;margin-top:9px;"><div id="nl-floating-preview" style="width:36px;height:36px;flex:none;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(120,140,160,.12);font-size:10px;color:#8a97a4;">${floatingImage?`<img src="${k(floatingImage)}" style="width:100%;height:100%;object-fit:cover;">`:'当前'}</div><button class="nl-btn ghost" id="nl-floating-image-pick" style="font-size:12px!important;padding:6px 9px!important;min-height:30px!important;">选择图片</button><button class="nl-btn ghost" id="nl-floating-image-reset" style="font-size:12px!important;padding:6px 9px!important;min-height:30px!important;"${floatingImage?'':' disabled'}>恢复当前预设</button><input type="file" id="nl-floating-image-file" accept="image/*" style="display:none;"></div></div>\n<div class="nl-field" id="nl-settings-nai-params" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);${t?"display:none;":""}"><div style="font-size:13px;color:#566472;font-weight:600;margin-bottom:8px;">智绘姬参数</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><select class="nl-input" id="nl-set-param-group" style="flex:1 1 auto;min-width:0;margin:0;">${currentParamOptions || '<option value="">（暂无参数组）</option>'}</select><button class="nl-btn ghost nl-set-param-btn" data-pa="new" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">新建</button><button class="nl-btn ghost nl-set-param-btn" data-pa="rename" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">重命名</button><button class="nl-btn ghost nl-set-param-btn" data-pa="del" style="flex:0 0 auto;font-size:11px!important;padding:4px 6px!important;min-height:26px!important;line-height:1.1!important;">删组</button></div><div id="nl-set-param-fields" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">${nlRenderParamFieldInputs("nl-set-pf-", currentNaiParams)}</div></div>\n<div id="nl-result" style="${t?"":"display:none;"}"><div class="nl-field"><div class="nl-label"><span>来源：${t?k(t.source||""):""}</span></div>${t&&t.thumb?`<img src="${t.thumb}" class="nl-dimg" id="nl-parse-thumb" style="max-height:200px;margin-bottom:6px;cursor:pointer;" title="点击更换">`:'<div id="nl-parse-thumb" style="cursor:pointer;text-align:center;padding:16px;border:1px dashed rgba(120,140,160,.3);border-radius:10px;color:#8a97a4;font-size:13px;">点击上传预览图（可选）</div>'}<input type="file" id="nl-parse-thumbfile" accept="image/*" style="display:none;"></div><div class="nl-field"><div class="nl-label"><span>正面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="pos" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="pos" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-pos">${t?k(t.positive||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>负面提示词</span><span class="nl-acts" style="display:inline-flex;align-items:center;gap:9px;"><span class="nl-copy" data-copy="neg" style="cursor:pointer;color:#7a8794;font-size:14px;line-height:1;" title="复制">⧉</span><span class="nl-expand" data-exp="neg" style="cursor:pointer;color:#7a8794;font-size:18px;line-height:1;" title="展开">⤢</span></span></div><textarea class="nl-ta" id="nl-neg">${t?k(t.negative||""):""}</textarea></div><div class="nl-field"><div class="nl-label"><span>命名</span></div><input class="nl-input" id="nl-name" placeholder="给这组提示词起个名字，例如：清冷古风少女"></div><div class="nl-field"><div class="nl-label"><span>预设标签</span></div><div class="nl-tags" id="nl-parse-tags" style="cursor:pointer;min-height:32px;padding:6px;border:1px solid rgba(120,140,160,.25);border-radius:10px;background:rgba(255,255,255,.7);"><span class="nl-tag" style="color:#8a97a4;border:1px dashed #aaa;background:transparent;">点击选择标签</span></div></div><div class="nl-btnrow"><button class="nl-btn ghost" id="nl-parse-close" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">关闭</button><button class="nl-btn" id="nl-save" style="font-size:12px!important;padding:6px 7px!important;min-height:30px!important;line-height:1.1!important;box-sizing:border-box!important;">保存到收藏库</button></div>\n</div>`;
+        if (t) {
+            var parsedOptionsHtml = nlParsedOptionHtml(t), nameField = e.querySelector("#nl-name");
+            parsedOptionsHtml && nameField && nameField.closest(".nl-field").insertAdjacentHTML("beforebegin", parsedOptionsHtml);
+            e.querySelectorAll(".nl-parsed-param").forEach(function(input){ input.addEventListener("change", function(){ t.selectedParamKeys = Array.from(e.querySelectorAll(".nl-parsed-param:checked")).map(function(x){ return x.getAttribute("data-param") }) }) });
+            e.querySelectorAll(".nl-parsed-vibe").forEach(function(input){ input.addEventListener("change", function(){ t.selectedVibeIndexes = Array.from(e.querySelectorAll(".nl-parsed-vibe:checked")).map(function(x){ return Number(x.getAttribute("data-vibe-index")) }) }) });
+            var parsedVibeName = e.querySelector("#nl-parsed-vibe-group");
+            parsedVibeName && parsedVibeName.addEventListener("input", function(){ t.vibeGroupName = parsedVibeName.value })
+        }
         if (!t) {
             var floatingSettings = e.querySelector("#nl-floating-settings"), resultBox = e.querySelector("#nl-result");
             floatingSettings && floatingSettings.insertAdjacentHTML("afterend", '<div class="nl-field" id="nl-random-settings" style="margin-top:10px;border:1px solid rgba(120,140,160,.25);border-radius:10px;padding:10px;background:rgba(255,255,255,.5);"></div>');
@@ -2703,7 +2775,14 @@
                     negative: negativePrompt
                 }, n && n.id);
             if (duplicatePreset && !confirm("已存在内容相同的预设「" + (duplicatePreset.name || "未命名") + "」，仍要继续保存吗？")) return;
-            const vibeBinding = n ? {
+            var hasParsedOptions = !!(c && (Object.keys(c.parsedParams || {}).length || (c.parsedVibes || []).length)), selectedParamKeys = hasParsedOptions ? Array.from(e.querySelectorAll(".nl-parsed-param:checked")).map(function(input){ return input.getAttribute("data-param") }) : [], selectedParams = {};
+            selectedParamKeys.forEach(function(key){ if ("__size__" === key) ["novelai_size","novelai_width","novelai_height"].forEach(function(sizeKey){ sizeKey in c.parsedParams && (selectedParams[sizeKey] = c.parsedParams[sizeKey]) }); else key in c.parsedParams && (selectedParams[key] = c.parsedParams[key]) });
+            var selectedVibeIndexes = hasParsedOptions ? Array.from(e.querySelectorAll(".nl-parsed-vibe:checked")).map(function(input){ return Number(input.getAttribute("data-vibe-index")) }) : [], parsedVibeName = selectedVibeIndexes.length ? ((e.querySelector("#nl-parsed-vibe-group") && e.querySelector("#nl-parsed-vibe-group").value || "").trim() || t + " Vibe") : "", parsedVibeGroup = parsedVibeName ? await nlSaveParsedVibes(c, selectedVibeIndexes, parsedVibeName) : "";
+            const vibeBinding = parsedVibeGroup ? {
+                    vibeEnabled: !0,
+                    vibeGroup: parsedVibeGroup,
+                    vibeStrengths: {}
+                } : n ? {
                     vibeEnabled: !!n.vibeEnabled,
                     vibeGroup: n.vibeGroup || "默认组",
                     vibeStrengths: n.vibeStrengths || {}
@@ -2713,7 +2792,7 @@
                     vibeStrengths: {}
                 },
                 _setpc = e.querySelector("#nl-settings-nai-params"),
-                naiParams = _setpc ? nlReadParamFieldInputs(_setpc, "nl-set-pf-") : nlGetSettingsNaiParams(e),
+                naiParams = hasParsedOptions ? selectedParams : _setpc ? nlReadParamFieldInputs(_setpc, "nl-set-pf-") : nlGetSettingsNaiParams(e),
                 _activeParamGroup = nlGetActiveParamGroup(),
                 r = {
                     id: n ? n.id : S(),
@@ -2732,8 +2811,9 @@
                     naiSteps: naiParams.novelai_steps,
                     naiPromptGuidance: naiParams.nai3Scale,
                     naiPromptGuidanceRescale: naiParams.cfg_rescale,
-                    naiParamGroup: n && n.naiParamGroup || NL_DEFAULT_PARAM_GROUP,
-                    naiParams: naiParams
+                    naiParamGroup: hasParsedOptions ? "" : n && n.naiParamGroup || NL_DEFAULT_PARAM_GROUP,
+                    naiParams: naiParams,
+                    naiParamsSelected: hasParsedOptions
                 };
             try {
                 await I.put(r);
